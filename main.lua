@@ -1,4 +1,4 @@
-local item = workspace:WaitForChild("workspace.Characters")
+local item = workspace:WaitForChild("Characters")
 
 local highlight = Instance.new("Highlight")
 highlight.Parent = item
