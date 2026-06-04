@@ -1,20 +1,19 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local RunService = game.RunService or game:FindService("RunService") -- CORREÇÃO ABSOLUTA DA LINHA 2
 local LocalPlayer = Players.LocalPlayer
 
-local noclipEnabled = true -- Altere para 'false' se quiser começar desligado
+local noclipEnabled = true -- Mude para 'false' se quiser que comece desligado
 
--- Loop de renderização que roda a cada frame físico do jogo
+-- Executa a cada atualização de física do cenário de forma super estável
 RunService.Stepped:Connect(function()
     if not noclipEnabled then return end
     
     local character = LocalPlayer.Character
     if character then
-        -- Varre todas as partes do seu personagem
+        -- Desativa a colisão das partes para permitir atravessar paredes
         for _, part in ipairs(character:GetDescendants()) do
-            -- Desativa a colisão apenas de partes físicas (braços, pernas, torso, roupas)
             if part:IsA("BasePart") and part.CanCollide then
-                -- Mantém a checagem para não atravessar o chão puro se estiver andando normal
+                -- Mantém apenas a base do pé/quadril ativa para você não cair no vácuo do mapa
                 if part.Name ~= "HumanoidRootPart" then
                     part.CanCollide = false
                 end
