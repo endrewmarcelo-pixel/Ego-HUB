@@ -1,4 +1,4 @@
--- ACESSO DIRETO SEGURO (SEM ERROS NO CONSOLE)
+-- ACESSO DIRETO SEGURO (Bypass de erros de injeção)
 local Players = game.Players or game:FindService("Players")
 local RunService = game.RunService or game:FindService("RunService")
 local UserInputService = game.UserInputService or game:FindService("UserInputService")
@@ -6,115 +6,86 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 -- ==========================================
--- VARIÁVEIS DE CONTROLE AJUSTÁVEIS
+-- CONFIGURAÇÕES E ESTADOS INTERNOS
 -- ==========================================
-local aimbotEnabled = false
 local silentAimEnabled = false
+local espBonesEnabled = false
+local espNamesEnabled = false
+local espLifeEnabled = false
 
-local aimbotSmoothness = 5 
-local aimbotFOV = 150       
-local silentAimFOV = 120   
+local silentAimFOV = 120
+local maxESPDistance = 1000
 
--- Interface Principal
-local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Combat_Menu_Gui")
+local BONE_COLOR = Color3.fromRGB(255, 255, 255)
+local BONE_THICKNESS = 2
+
+local BONE_STRUCTURE = {
+    {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
+    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
+    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
+    {"Torso", "Left Arm"}, {"Torso", "Right Arm"}, {"Torso", "Left Leg"}, {"Torso", "Right Leg"}
+}
+
+-- Interface Gráfica Principal
+local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Universal_Cheat_v4")
 if ScreenGui then ScreenGui:Destroy() end
 
 ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "Combat_Menu_Gui"
+ScreenGui.Name = "Universal_Cheat_v4"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Força a ordem correta de cliques
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer.PlayerGui
 
+local DrawingFolder = Instance.new("Folder")
+DrawingFolder.Name = "DrawingFolder"
+DrawingFolder.Parent = ScreenGui
+
 -- ==========================================
--- CÍRCULOS VISUAIS DE FOV (MIRA)
+-- CÍRCULO VISUAL DO SILENT AIM (FOV)
 -- ==========================================
-local function createFOVCircle(name, color, size)
-    local circle = Instance.new("Frame")
-    circle.Name = name
-    circle.AnchorPoint = Vector2.new(0.5, 0.5)
-    circle.BackgroundColor3 = color
-    circle.BackgroundTransparency = 0.95
-    circle.Size = UDim2.fromOffset(size * 2, size * 2)
-    circle.Visible = false
-    circle.ZIndex = 1
-    circle.Parent = ScreenGui
+local FOVCircle = Instance.new("Frame")
+FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+FOVCircle.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+FOVCircle.BackgroundTransparency = 0.96
+FOVCircle.Visible = false
+FOVCircle.Parent = ScreenGui
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = color
-    stroke.Thickness = 1
-    stroke.Transparency = 0.6
-    stroke.Parent = circle
+local FOVStroke = Instance.new("UIStroke")
+FOVStroke.Color = Color3.fromRGB(0, 150, 255)
+FOVStroke.Thickness = 1
+FOVStroke.Transparency = 0.4
+FOVStroke.Parent = FOVCircle
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = circle
-    return circle
-end
-
-local AimbotCircle = createFOVCircle("AimbotFOV", Color3.fromRGB(255, 80, 80), aimbotFOV)
-local SilentCircle = createFOVCircle("SilentFOV", Color3.fromRGB(80, 150, 255), silentAimFOV)
+local FOVCorner = Instance.new("UICorner")
+FOVCorner.CornerRadius = UDim.new(1, 0)
+FOVCorner.Parent = FOVCircle
 
 RunService.RenderStepped:Connect(function()
     local viewportSize = Camera.ViewportSize
-    local center = UDim2.fromOffset(viewportSize.X / 2, viewportSize.Y / 2)
-    
-    AimbotCircle.Position = center
-    AimbotCircle.Visible = aimbotEnabled
-    AimbotCircle.Size = UDim2.fromOffset(aimbotFOV * 2, aimbotFOV * 2)
-
-    SilentCircle.Position = center
-    SilentCircle.Visible = silentAimEnabled
-    SilentCircle.Size = UDim2.fromOffset(silentAimFOV * 2, silentAimFOV * 2)
+    FOVCircle.Position = UDim2.fromOffset(viewportSize.X / 2, viewportSize.Y / 2)
+    FOVCircle.Size = UDim2.fromOffset(silentAimFOV * 2, silentAimFOV * 2)
+    FOVCircle.Visible = silentAimEnabled
 end)
 
 -- ==========================================
--- PAINEL DO MENU PRINCIPAL (CRIADO ANTES PARA O BOTÃO USAR)
+-- BOTÃO ALFA REDONDO (ABRIR / FECHAR)
 -- ==========================================
-local MenuFrame = Instance.new("Frame")
-MenuFrame.Size = UDim2.fromOffset(280, 310)
-MenuFrame.Position = UDim2.new(0.05, 0, 0.30, 0)
-MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MenuFrame.BorderSizePixel = 0
-MenuFrame.Visible = false -- Inicia invisível até clicar no botão Alpha
-MenuFrame.Active = true
-MenuFrame.ZIndex = 10
-MenuFrame.Parent = ScreenGui
+local MainFrame = Instance.new("Frame")
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MenuFrame
-
-local TopLine = Instance.new("Frame")
-TopLine.Size = UDim2.new(1, 0, 0, 4)
-TopLine.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-TopLine.BorderSizePixel = 0
-TopLine.Parent = MenuFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Position = UDim2.new(0, 0, 0, 5)
-Title.Text = "COMBAT ASSIST MENU"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
-Title.Parent = MenuFrame
-
--- ==========================================
--- BOTÃO ALFA (REDONDO) PARA ABRIR/FECHAR
--- ==========================================
 local AlphaButton = Instance.new("TextButton")
-AlphaButton.Size = UDim2.fromOffset(50, 50)
+AlphaButton.Size = UDim2.fromOffset(45, 45)
 AlphaButton.Position = UDim2.new(0.02, 0, 0.2, 0)
-AlphaButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-AlphaButton.BackgroundTransparency = 0.3
-AlphaButton.Text = "AIM"
+AlphaButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+AlphaButton.BackgroundTransparency = 0.2
+AlphaButton.Text = "MENU"
 AlphaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 AlphaButton.Font = Enum.Font.GothamBold
-AlphaButton.TextSize = 14
+AlphaButton.TextSize = 10
 AlphaButton.Active = true
-AlphaButton.ZIndex = 20 -- Fica sempre acima de tudo
+AlphaButton.ZIndex = 20
 AlphaButton.Parent = ScreenGui
 
 local AlphaCorner = Instance.new("UICorner")
@@ -126,268 +97,168 @@ AlphaStroke.Thickness = 2
 AlphaStroke.Color = Color3.fromRGB(255, 255, 255)
 AlphaStroke.Parent = AlphaButton
 
--- Sistema de arrastar o botão Alfa
-local btnDragging, btnDragInput, btnDragStart, btnStartPos
-AlphaButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        btnDragging = true btnDragStart = input.Position btnStartPos = AlphaButton.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then btnDragging = false end end)
+-- Arrastador do Botão Alfa
+local bDrag, bInput, bStart, bPos
+AlphaButton.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        bDrag = true bStart = i.Position bPos = AlphaButton.Position
+        i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then bDrag = false end end)
     end
 end)
-AlphaButton.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then btnDragInput = input end end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == btnDragInput and btnDragging then
-        local delta = input.Position - btnDragStart
-        AlphaButton.Position = UDim2.new(btnStartPos.X.Scale, btnStartPos.X.Offset + delta.X, btnStartPos.Y.Scale, btnStartPos.Y.Offset + delta.Y)
+AlphaButton.InputChanged:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then bInput = i end end)
+UserInputService.InputChanged:Connect(function(i)
+    if i == bInput and bDrag then
+        local d = i.Position - bStart
+        AlphaButton.Position = UDim2.new(bPos.X.Scale, bPos.X.Offset + d.X, bPos.Y.Scale, bPos.Y.Offset + d.Y)
     end
 end)
 
--- Abre e fecha o menu perfeitamente ao clicar
-AlphaButton.MouseButton1Click:Connect(function() 
-    MenuFrame.Visible = not MenuFrame.Visible 
-end)
+AlphaButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
 -- ==========================================
--- CRIAÇÃO DOS BOTÕES DO MENU (COM ATIVAÇÃO CORRIGIDA)
+-- PAINEL DO MENU DESIGN PREMIUM
 -- ==========================================
-local function createMenuButton(yPos, text)
+MainFrame.Size = UDim2.fromOffset(260, 360)
+MainFrame.Position = UDim2.new(0.05, 0, 0.28, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.ZIndex = 10
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local TopLine = Instance.new("Frame")
+TopLine.Size = UDim2.new(1, 0, 0, 4)
+TopLine.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+TopLine.BorderSizePixel = 0
+TopLine.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Position = UDim2.new(0, 0, 0, 4)
+Title.Text = "UNIVERSAL ASSIST v4"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+Title.Parent = MainFrame
+
+-- Arrastador do Menu Principal
+local mDrag, mInput, mStart, mPos
+MainFrame.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        mDrag = true mStart = i.Position mPos = MainFrame.Position
+        i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then mDrag = false end end)
+    end
+end)
+MainFrame.InputChanged:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then mInput = i end end)
+UserInputService.InputChanged:Connect(function(i)
+    if i == mInput and mDrag then
+        local d = i.Position - mStart
+        MainFrame.Position = UDim2.new(mPos.X.Scale, mPos.X.Offset + d.X, mPos.Y.Scale, mPos.Y.Offset + d.Y)
+    end
+end)
+
+-- Componente: Botões Alternadores On/Off
+local function createToggle(yPos, text, defaultState, callback)
+    local state = defaultState
+
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -30, 0, 35)
+    btn.Size = UDim2.new(1, -30, 0, 34)
     btn.Position = UDim2.new(0, 15, 0, yPos)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 30, 32)
-    btn.Text = text .. ": DESATIVADO"
-    btn.TextColor3 = Color3.fromRGB(230, 75, 75)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 11
-    btn.Active = true
-    btn.ZIndex = 12
-    btn.Parent = MenuFrame
+    btn.ZIndex = 11
+    btn.Parent = MainFrame
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = btn
 
     local stroke = Instance.new("UIStroke")
     stroke.Thickness = 1
-    stroke.Color = Color3.fromRGB(230, 75, 75)
     stroke.Parent = btn
 
-    return btn, stroke
+    local function updateVisual()
+        if state then
+            btn.BackgroundColor3 = Color3.fromRGB(25, 35, 30)
+            btn.TextColor3 = Color3.fromRGB(75, 220, 130)
+            btn.Text = text .. ": LIGADO"
+            stroke.Color = Color3.fromRGB(75, 220, 130)
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(35, 25, 28)
+            btn.TextColor3 = Color3.fromRGB(220, 75, 75)
+            btn.Text = text .. ": DESLIGADO"
+            stroke.Color = Color3.fromRGB(220, 75, 75)
+        end
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        updateVisual()
+        callback(state)
+    end)
+
+    updateVisual()
 end
 
-local ToggleAimbot, StrokeAimbot = createMenuButton(45, "LOCK-ON AIMBOT")
-local ToggleSilent, StrokeSilent = createMenuButton(90, "SILENT AIM")
+-- Instanciando os Botões
+createToggle(45, "SILENT AIM", silentAimEnabled, function(v) silentAimEnabled = v end)
+createToggle(85, "ESP BONES", espBonesEnabled, function(v) espBonesEnabled = v DrawingFolder:ClearAllChildren() end)
+createToggle(125, "ESP NAMES", espNamesEnabled, function(v) espNamesEnabled = v DrawingFolder:ClearAllChildren() end)
+createToggle(165, "ESP LIFE (BARRA)", espLifeEnabled, function(v) espLifeEnabled = v DrawingFolder:ClearAllChildren() end)
 
-local function createAdjusterFrame(yPos, labelText, defaultValue)
+-- Componente: Sliders Ajustáveis (FOV e Distância)
+local function createSlider(yPos, labelText, min, max, default, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -30, 0, 35)
+    frame.Size = UDim2.new(1, -30, 0, 45)
     frame.Position = UDim2.new(0, 15, 0, yPos)
-    frame.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+    frame.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
     frame.BorderSizePixel = 0
     frame.ZIndex = 11
-    frame.Parent = MenuFrame
+    frame.Parent = MainFrame
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = frame
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 150, 1, 0)
-    label.Position = UDim2.new(0, 12, 0, 0)
-    label.Text = labelText
-    label.TextColor3 = Color3.fromRGB(150, 150, 160)
+    label.Size = UDim2.new(1, -20, 0, 20)
+    label.Position = UDim2.new(0, 10, 0, 4)
+    label.Text = labelText .. ": " .. default
+    label.TextColor3 = Color3.fromRGB(160, 160, 170)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamMedium
-    label.TextSize = 11
+    label.TextSize = 10
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.ZIndex = 12
     label.Parent = frame
 
-    local input = Instance.new("TextBox")
-    input.Size = UDim2.new(1, -175, 1, -12)
-    input.Position = UDim2.new(0, 160, 0, 6)
-    input.BackgroundColor3 = Color3.fromRGB(38, 38, 48)
-    input.Text = tostring(defaultValue)
-    input.TextColor3 = Color3.fromRGB(255, 255, 255)
-    input.Font = Enum.Font.GothamBold
-    input.TextSize = 12
-    input.ClearTextOnFocus = false
-    input.ZIndex = 13 -- Mantém a caixa de texto isolada das camadas do botão
-    input.Parent = frame -- CORREÇÃO CRÍTICA DE PARENTING DO INPUT
+    local slideBar = Instance.new("TextButton")
+    slideBar.Size = UDim2.new(1, -20, 0, 6)
+    slideBar.Position = UDim2.new(0, 10, 0, 28)
+    slideBar.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    slideBar.Text = ""
+    slideBar.ZIndex = 12
+    slideBar.Parent = frame
 
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 6)
-    inputCorner.Parent = input
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(1, 0)
+    barCorner.Parent = slideBar
 
-    return input
-end
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+    fill.BorderSizePixel = 0
+    fill.ZIndex = 13
+    fill.Parent = slideBar
 
-local InputAimSmooth = createAdjusterFrame(140, "Aimbot Suavidade (1-50):", aimbotSmoothness)
-local InputAimFOV = createAdjusterFrame(185, "Raio Aimbot FOV (10-800):", aimbotFOV)
-local InputSilentFOV = createAdjusterFrame(230, "Raio Silent FOV (10-800):", silentAimFOV)
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(1, 0)
+    fillCorner.Parent = fill
 
--- Arrastar o menu principal
-local menuDragging, menuDragInput, menuDragStart, menuStartPos
-MenuFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        menuDragging = true menuDragStart = input.Position menuStartPos = MenuFrame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then menuDragging = false end end)
-    end
-end)
-MenuFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then menuDragInput = input end end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == menuDragInput and menuDragging then
-        local delta = input.Position - menuDragStart
-        MenuFrame.Position = UDim2.new(menuStartPos.X.Scale, menuStartPos.X.Offset + delta.X, menuStartPos.Y.Scale, menuStartPos.Y.Offset + delta.Y)
-    end
-end)
-
--- ==========================================
--- SISTEMA DE INTERRUPÇÃO E ATIVAÇÃO SUAVE DOS BOTÕES
--- ==========================================
-local function updateBtnStyle(state, btn, stroke, text)
-    if state then
-        btn.BackgroundColor3 = Color3.fromRGB(30, 40, 35)
-        btn.TextColor3 = Color3.fromRGB(75, 230, 130)
-        btn.Text = text .. ": ATIVADO"
-        stroke.Color = Color3.fromRGB(75, 230, 130)
-    else
-        btn.BackgroundColor3 = Color3.fromRGB(40, 30, 32)
-
-        -- =================================================================
--- INJETOR PRO: EGO-HUB + BYPASS ANTI-BAN + OTIMIZADOR DE INTERFACE
--- =================================================================
-
--- 1. PROTEÇÃO ANTI-BAN PRO (Metatable Bypass)
--- Impede que o jogo detecte que você está alterando a velocidade ou injetando scripts
-local mt = getrawmetatable(game)
-local oldIndex = mt.__index
-local oldNamecall = mt.__namecall
-setreadonly(mt, false)
-
-mt.__index = newcclosure(function(self, key)
-    -- Se o jogo tentar checar se a sua velocidade (WalkSpeed) foi alterada, o script mente dizendo que está no padrão (16)
-    if not checkcaller() and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "JumpPower") then
-        if key == "WalkSpeed" then return 16 end
-        if key == "JumpPower" then return 50 end
-    end
-    return oldIndex(self, key)
-end)
-
-mt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    -- Bloqueia tentativas do jogo de teletransportar você para uma sala de punição (Ban Wave)
-    if not checkcaller() and (method == "Kick" or method == "kick") then
-        warn("[PRO BYPASS] Tentativa de Kick/Ban bloqueada com sucesso!")
-        return nil
-    end
-    return oldNamecall(self, ...)
-end)
-setreadonly(mt, true)
-
--- 2. OTIMIZADOR DE RENDERIZAÇÃO (Para não travar em Mobile/PC Fraco)
--- Configura a interface para renderizar na ordem correta de cliques e evita sumiço de botões
-game.Players.LocalPlayer:WaitForChild("PlayerGui").ChildAdded:Connect(function(child)
-    if child:IsA("ScreenGui") then
-        child.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        -- Desativa sombras pesadas de textos criados por scripts externos para economizar FPS
-        for _, descendant in ipairs(child:GetDescendants()) do
-            if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-                descendant.TextStrokeTransparency = 0.5
-            end
-        end
-    end
-end)
-
--- 3. EXECUÇÃO DO SEU SCRIPT (EGO-HUB)
--- Carrega o link oficial do GitHub com proteção de buffer contra falhas de conexão
-print("[PRO EXECUTER] Aplicando otimizações e carregando Ego-HUB...")
-
-local success, result = pcall(function()
-    return game:HttpGet("https://githubusercontent.com", true)
-end)
-
-if success and result then
-    loadstring(result)()
-    print("[PRO EXECUTER] Ego-HUB carregado com sucesso e protegido!")
-else
-    warn("[PRO EXECUTER] Erro ao carregar o script do GitHub. Verifique sua conexão ou executor.")
-end
-
-        -- =================================================================
--- DESBLOQUEADOR DE CLIQUE PRO + INJETOR EGO-HUB
--- =================================================================
-
-local Players = game.Players or game:FindService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-print("[PRO DESBLOQUEADOR] Iniciando varredura de interface...")
-
--- MOTOR QUE DESCONGELA OS BOTÕES DO EGO-HUB EM TEMPO REAL
-LocalPlayer:WaitForChild("PlayerGui").ChildAdded:Connect(function(gui)
-    if gui:IsA("ScreenGui") then
-        -- Corrige o comportamento global de clique da tela injetada
-        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        
-        -- Varre tudo o que o Ego-HUB criar e força a ativação
-        local function fixElements(parent)
-            for _, element in ipairs(parent:GetChildren()) do
-                -- Se for um botão travado, destrava na marra
-                if element:IsA("TextButton") or element:IsA("ImageButton") then
-                    element.Active = true
-                    element.Selectable = true
-                    element.Modal = true -- Força o Roblox a priorizar o clique neste botão
-                -- Se for o painel de fundo, garante que ele aceite interações sem congelar
-                elseif element:IsA("Frame") or element:IsA("ScrollingFrame") then
-                    element.Active = true
-                end
-                -- Continua procurando dentro de sub-menus
-                fixElements(element)
-            end
-        end
-        
-        -- Executa a correção imediatamente e monitora novos botões criados pelas abas
-        fixElements(gui)
-        gui.DescendantAdded:Connect(function(descendant)
-            if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
-                descendant.Active = true
-                descendant.Selectable = true
-                descendant.Modal = true
-            elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-                descendant.Active = true
-            end
-        end)
-    end
-end)
-
--- PROTEÇÃO ANTI-BAN INTERNA (Evita detecção enquanto usa o menu)
-local mt = getrawmetatable(game)
-local oldIndex = mt.__index
-local oldNamecall = mt.__namecall
-setreadonly(mt, false)
-mt.__index = newcclosure(function(self, key)
-    if not checkcaller() and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "JumpPower") then
-        if key == "WalkSpeed" then return 16 end
-        if key == "JumpPower" then return 50 end
-    end
-    return oldIndex(self, key)
-end)
-mt.__namecall = newcclosure(function(self, ...)
-    local method = getnamecallmethod()
-    if not checkcaller() and (method == "Kick" or method == "kick") then return nil end
-    return oldNamecall(self, ...)
-end)
-setreadonly(mt, true)
-
--- EXECUTA O EGO-HUB DIRETO COM AS CORREÇÕES ATIVAS
-local success, result = pcall(function()
-    return game:HttpGet("https://githubusercontent.com", true)
-end)
-
-if success and result then
-    loadstring(result)()
-    print("[PRO DESBLOQUEADOR] Ego-HUB injetado. Botões destravados com sucesso!")
-else
-    warn("[PRO DESBLOQUEADOR] Erro ao conectar ao repositório do script.")
-end
-
+    local function slide(input)
