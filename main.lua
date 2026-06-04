@@ -1,5 +1,5 @@
 -- ====================================================================
--- EGO-HUB 2026 - VERSÃO NATIVA SEM BIBLIOTECAS EXTERNAS (ANTI-ERRO)
+-- EGO-HUB 2026 - VERSÃO NATIVA COM FLY, WALL E ESP BONE (ANTI-ERRO)
 -- ====================================================================
 
 local Players = game:GetService("Players")
@@ -14,10 +14,13 @@ local camera = workspace.CurrentCamera
 
 -- Estados globais
 local wallAtivado = false
+local espBoneAtivado = false
 local flying = false
 local speed = 50
 
--- Atualiza referências ao renascer
+-- Tabelas para guardar os desenhos do esqueleto
+local esqueletos Ativos = {}
+
 LocalPlayer.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     hrp = character:WaitForChild("HumanoidRootPart")
@@ -30,26 +33,23 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "EgoHubNativo"
 ScreenGui.ResetOnSpawn = false
 
--- Injeção segura na interface
 local sucessoGui, _ = pcall(function() ScreenGui.Parent = CoreGui end)
 if not sucessoGui then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
--- Painel Principal
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.Size = UDim2.new(0, 220, 0, 210)
+MainFrame.Size = UDim2.new(0, 220, 0, 255) -- Aumentado para caber o novo botão
 MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- Permite arrastar o menu pela tela
+MainFrame.Draggable = true
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 8)
 MainCorner.Parent = MainFrame
 
--- Título do Menu
 local Title = Instance.new("TextLabel")
 Title.Name = "Title"
 Title.Parent = MainFrame
@@ -65,60 +65,173 @@ local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 8)
 TitleCorner.Parent = Title
 
--- Botão Modo Wall (ESP)
+-- Botão Modo Wall (Highlight)
 local BtnWall = Instance.new("TextButton")
-BtnWall.Name = "BtnWall"
 BtnWall.Parent = MainFrame
 BtnWall.Size = UDim2.new(0, 190, 0, 35)
-BtnWall.Position = UDim2.new(0.06, 0, 0.25, 0)
-BtnWall.BackgroundColor3 = Color3.fromRGB(231, 76, 60) -- Vermelho (Desativado)
+BtnWall.Position = UDim2.new(0.06, 0, 0.18, 0)
+BtnWall.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 BtnWall.Text = "Modo Wall: OFF"
 BtnWall.TextColor3 = Color3.fromRGB(255, 255, 255)
 BtnWall.Font = Enum.Font.SourceSansBold
 BtnWall.TextSize = 14
-BtnWall.BorderSizePixel = 0
 
 local WallCorner = Instance.new("UICorner")
 WallCorner.CornerRadius = UDim.new(0, 6)
 WallCorner.Parent = BtnWall
 
--- Botão Modo Fly (Voo)
+-- BOTÃO NOVO: ESP BONE (ESQUELETO)
+local BtnBone = Instance.new("TextButton")
+BtnBone.Parent = MainFrame
+BtnBone.Size = UDim2.new(0, 190, 0, 35)
+BtnBone.Position = UDim2.new(0.06, 0, 0.36, 0)
+BtnBone.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+BtnBone.Text = "ESP Bone: OFF"
+BtnBone.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnBone.Font = Enum.Font.SourceSansBold
+BtnBone.TextSize = 14
+
+local BoneCorner = Instance.new("UICorner")
+BoneCorner.CornerRadius = UDim.new(0, 6)
+BoneCorner.Parent = BtnBone
+
+-- Botão Modo Fly
 local BtnFly = Instance.new("TextButton")
-BtnFly.Name = "BtnFly"
 BtnFly.Parent = MainFrame
 BtnFly.Size = UDim2.new(0, 190, 0, 35)
-BtnFly.Position = UDim2.new(0.06, 0, 0.48, 0)
-BtnFly.BackgroundColor3 = Color3.fromRGB(231, 76, 60) -- Vermelho (Desativado)
+BtnFly.Position = UDim2.new(0.06, 0, 0.54, 0)
+BtnFly.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
 BtnFly.Text = "Modo Fly: OFF"
 BtnFly.TextColor3 = Color3.fromRGB(255, 255, 255)
 BtnFly.Font = Enum.Font.SourceSansBold
 BtnFly.TextSize = 14
-BtnFly.BorderSizePixel = 0
 
 local FlyCorner = Instance.new("UICorner")
 FlyCorner.CornerRadius = UDim.new(0, 6)
 FlyCorner.Parent = BtnFly
 
--- Caixa de Texto para Velocidade (Substitui o Slider para evitar bugs)
+-- Entrada de Velocidade
 local InputSpeed = Instance.new("TextBox")
-InputSpeed.Name = "InputSpeed"
 InputSpeed.Parent = MainFrame
 InputSpeed.Size = UDim2.new(0, 190, 0, 35)
-InputSpeed.Position = UDim2.new(0.06, 0, 0.72, 0)
+InputSpeed.Position = UDim2.new(0.06, 0, 0.73, 0)
 InputSpeed.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 InputSpeed.Text = "50"
 InputSpeed.PlaceholderText = "Velocidade (1-300)"
 InputSpeed.TextColor3 = Color3.fromRGB(255, 255, 255)
 InputSpeed.Font = Enum.Font.SourceSans
 InputSpeed.TextSize = 14
-InputSpeed.BorderSizePixel = 0
 
 local SpeedCorner = Instance.new("UICorner")
 SpeedCorner.CornerRadius = UDim.new(0, 6)
 SpeedCorner.Parent = InputSpeed
 
 -- ====================================================================
--- LÓGICA DO SISTEMA 1: MODO WALL / ESP
+-- LÓGICA DO SISTEMA: ESP BONE (ESQUELETO 3D)
+-- ====================================================================
+local function criarOsso(p1, p2, pai)
+    local adorn = Instance.new("CylinderHandleAdornment")
+    adorn.Name = "BoneLine"
+    adorn.Color3 = Color3.fromRGB(255, 0, 0) -- Cor do esqueleto (Vermelho)
+    adorn.AlwaysOnTop = true
+    adorn.Radius = 0.08
+    adorn.Transparency = 0.2
+    adorn.Adornee = p1
+    adorn.Parent = pai
+    
+    -- Atualiza a posição e tamanho do osso baseado na distância das articulações
+    local conexao
+    conexao = RunService.Heartbeat:Connect(function()
+        if not adorn or not adorn.Parent or not p1 or not p2 then
+            conexao:Disconnect()
+            return
+        end
+        local mag = (p1.Position - p2.Position).Magnitude
+        adorn.Height = mag
+        adorn.CFrame = CFrame.lookAt(p1.Position, p2.Position) * CFrame.new(0, 0, -mag/2)
+    end)
+end
+
+local function designarEsqueleto(player)
+    if player == LocalPlayer then return end
+    
+    local function criar()
+        if not espBoneAtivado then return end
+        local char = player.Character
+        if not char then return end
+        
+        local pastaBones = Instance.new("Folder")
+        pastaBones.Name = "EgoBones"
+        pastaBones.Parent = char
+        esqueletosAtivos[player] = pastaBones
+        
+        -- Suporta R15 e R6 de forma inteligente
+        if char:WaitForChild("Humanoid", 5).RigType == Enum.HumanoidRigType.R15 then
+            local partes = {"Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "LeftLowerArm", "RightUpperArm", "RightLowerArm", "LeftUpperLeg", "LeftLowerLeg", "RightUpperLeg", "RightLowerLeg"}
+            for _, p in ipairs(partes) do char:WaitForChild(p, 5) end
+            
+            pcall(function()
+                criarOsso(char.Head, char.UpperTorso, pastaBones)
+                criarOsso(char.UpperTorso, char.LowerTorso, pastaBones)
+                -- Braço Esquerdo
+                criarOsso(char.UpperTorso, char.LeftUpperArm, pastaBones)
+                criarOsso(char.LeftUpperArm, char.LeftLowerArm, pastaBones)
+                -- Braço Direito
+                criarOsso(char.UpperTorso, char.RightUpperArm, pastaBones)
+                criarOsso(char.RightUpperArm, char.RightLowerArm, pastaBones)
+                -- Perna Esquerda
+                criarOsso(char.LowerTorso, char.LeftUpperLeg, pastaBones)
+                criarOsso(char.LeftUpperLeg, char.LeftLowerLeg, pastaBones)
+                -- Perna Direito
+                criarOsso(char.LowerTorso, char.RightUpperLeg, pastaBones)
+                criarOsso(char.RightUpperLeg, char.RightLowerLeg, pastaBones)
+            end)
+        else -- R6 Rig
+            local partes = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
+            for _, p in ipairs(partes) do char:WaitForChild(p, 5) end
+            
+            pcall(function()
+                criarOsso(char.Head, char.Torso, pastaBones)
+                criarOsso(char.Torso, char["Left Arm"], pastaBones)
+                criarOsso(char.Torso, char["Right Arm"], pastaBones)
+                criarOsso(char.Torso, char["Left Leg"], pastaBones)
+                criarOsso(char.Torso, char["Right Leg"], pastaBones)
+            end)
+        end
+    end
+    
+    player.CharacterAdded:Connect(function()
+        task.wait(1)
+        criar()
+    end)
+    criar()
+end
+
+local function removerTodosOsBones()
+    for _, folder in pairs(esqueletosAtivos) do
+        if folder then folder:Destroy() end
+    end
+    esqueletosAtivos = {}
+end
+
+BtnBone.MouseButton1Click:Connect(function()
+    espBoneAtivado = not espBoneAtivado
+    if espBoneAtivado then
+        BtnBone.Text = "ESP Bone: ON"
+        BtnBone.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Verde
+        for _, p in ipairs(Players:GetPlayers()) do designarEsqueleto(p) end
+    else
+        BtnBone.Text = "ESP Bone: OFF"
+        BtnBone.BackgroundColor3 = Color3.fromRGB(231, 76, 60) -- Vermelho
+        removerTodosOsBones()
+    end
+end)
+
+-- Vincular lógica de novos jogadores que entrarem na partida
+Players.PlayerAdded:Connect(designarEsqueleto)
+
+-- ====================================================================
+-- LÓGICA DO SISTEMA 2: MODO WALL (HIGHLIGHT)
 -- ====================================================================
 local function removerTodosOsDestaques()
     for _, player in ipairs(Players:GetPlayers()) do
@@ -143,80 +256,8 @@ local function aplicarDestaque(character)
     highlight.Parent = character
 end
 
-local function conectarJogador(player)
-    player.CharacterAdded:Connect(function(char) if wallAtivado then aplicarDestaque(char) end end)
-    if player.Character and wallAtivado then aplicarDestaque(player.Character) end
-end
-
-for _, player in ipairs(Players:GetPlayers()) do conectarJogador(player) end
-Players.PlayerAdded:Connect(conectarJogador)
-
 BtnWall.MouseButton1Click:Connect(function()
     wallAtivado = not wallAtivado
     if wallAtivado then
         BtnWall.Text = "Modo Wall: ON"
-        BtnWall.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Verde
-        for _, p in ipairs(Players:GetPlayers()) do if p.Character then aplicarDestaque(p.Character) end end
-    else
-        BtnWall.Text = "Modo Wall: OFF"
-        BtnWall.BackgroundColor3 = Color3.fromRGB(231, 76, 60) -- Vermelho
-        removerTodosOsDestaques()
-    end
-end)
-
--- ====================================================================
--- LÓGICA DO SISTEMA 2: MODO FLY
--- ====================================================================
-local attachment = Instance.new("Attachment", hrp)
-local linearVelocity = Instance.new("LinearVelocity", hrp)
-linearVelocity.Attachment0 = attachment
-linearVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-linearVelocity.Enabled = false
-
-local function setFlyState(state)
-    flying = state
-    linearVelocity.Enabled = flying
-    if character and character:FindFirstChild("Humanoid") then
-        character.Humanoid:ChangeState(flying and Enum.HumanoidStateType.Physics or Enum.HumanoidStateType.GettingUp)
-    end
-end
-
-BtnFly.MouseButton1Click:Connect(function()
-    setFlyState(not flying)
-    if flying then
-        BtnFly.Text = "Modo Fly: ON"
-        BtnFly.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Verde
-    else
-        BtnFly.Text = "Modo Fly: OFF"
-        BtnFly.BackgroundColor3 = Color3.fromRGB(231, 76, 60) -- Vermelho
-    end
-end)
-
--- Atualiza a velocidade digitada na caixa de texto (Limita entre 1 e 300)
-InputSpeed.FocusLost:Connect(function(enterPressed)
-    local valor = tonumber(InputSpeed.Text)
-    if valor then
-        speed = math.clamp(valor, 1, 300)
-        InputSpeed.Text = tostring(speed)
-    else
-        InputSpeed.Text = tostring(speed)
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if not flying or not hrp then return end
-    local direction = Vector3.new(0, 0, 0)
-    if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + camera.CFrame.LookVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - camera.CFrame.LookVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction = direction - camera.CFrame.RightVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction = direction + camera.CFrame.RightVector end
-    linearVelocity.VectorVelocity = direction.Magnitude > 0 and direction.Unit * speed or Vector3.new(0, 0, 0)
-end)
-
--- Ativando o atalho ocultar/mostrar com a tecla HOME
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.Home then
-        MainFrame.Visible = not MainFrame.Visible
-    end
-end)
+        BtnWall.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
