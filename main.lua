@@ -1,4 +1,4 @@
--- ACCESSO DIRETO SEM GETSERVICE (CORREÇÃO ABSOLUTA DA LINHA 1 E 2)
+-- ACESSO DIRETO SEGURO (SEM ERROS NO CONSOLE)
 local Players = game.Players or game:FindService("Players")
 local RunService = game.RunService or game:FindService("RunService")
 local UserInputService = game.UserInputService or game:FindService("UserInputService")
@@ -11,9 +11,9 @@ local Camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local silentAimEnabled = false
 
-local aimbotSmoothness = 5 -- Suavidade do puxão (1 a 50)
-local aimbotFOV = 150       -- Raio do Aimbot
-local silentAimFOV = 120   -- Raio do Silent Aim
+local aimbotSmoothness = 5 
+local aimbotFOV = 150       
+local silentAimFOV = 120   
 
 -- Interface Principal
 local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Combat_Menu_Gui")
@@ -23,6 +23,7 @@ ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Combat_Menu_Gui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Força a ordem correta de cliques
 ScreenGui.Parent = LocalPlayer.PlayerGui
 
 -- ==========================================
@@ -36,6 +37,7 @@ local function createFOVCircle(name, color, size)
     circle.BackgroundTransparency = 0.95
     circle.Size = UDim2.fromOffset(size * 2, size * 2)
     circle.Visible = false
+    circle.ZIndex = 1
     circle.Parent = ScreenGui
 
     local stroke = Instance.new("UIStroke")
@@ -67,57 +69,16 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ==========================================
--- BOTÃO ALFA (REDONDO) PARA ABRIR/FECHAR
+-- PAINEL DO MENU PRINCIPAL (CRIADO ANTES PARA O BOTÃO USAR)
 -- ==========================================
 local MenuFrame = Instance.new("Frame")
-
-local AlphaButton = Instance.new("TextButton")
-AlphaButton.Size = UDim2.fromOffset(50, 50)
-AlphaButton.Position = UDim2.new(0.02, 0, 0.2, 0)
-AlphaButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-AlphaButton.BackgroundTransparency = 0.3
-AlphaButton.Text = "AIM"
-AlphaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-AlphaButton.Font = Enum.Font.GothamBold
-AlphaButton.TextSize = 14
-AlphaButton.Active = true
-AlphaButton.Parent = ScreenGui
-
-local AlphaCorner = Instance.new("UICorner")
-AlphaCorner.CornerRadius = UDim.new(1, 0)
-AlphaCorner.Parent = AlphaButton
-
-local AlphaStroke = Instance.new("UIStroke")
-AlphaStroke.Thickness = 2
-AlphaStroke.Color = Color3.fromRGB(255, 255, 255)
-AlphaStroke.Parent = AlphaButton
-
-local btnDragging, btnDragInput, btnDragStart, btnStartPos
-AlphaButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        btnDragging = true btnDragStart = input.Position btnStartPos = AlphaButton.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then btnDragging = false end end)
-    end
-end)
-AlphaButton.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then btnDragInput = input end end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == btnDragInput and btnDragging then
-        local delta = input.Position - btnDragStart
-        AlphaButton.Position = UDim2.new(btnStartPos.X.Scale, btnStartPos.X.Offset + delta.X, btnStartPos.Y.Scale, btnStartPos.Y.Offset + delta.Y)
-    end
-end)
-
-AlphaButton.MouseButton1Click:Connect(function() MenuFrame.Visible = not MenuFrame.Visible end)
-
--- ==========================================
--- PAINEL DO MENU ARRASTÁVEL
--- ==========================================
 MenuFrame.Size = UDim2.fromOffset(280, 310)
 MenuFrame.Position = UDim2.new(0.05, 0, 0.30, 0)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MenuFrame.BorderSizePixel = 0
-MenuFrame.Visible = false
+MenuFrame.Visible = false -- Inicia invisível até clicar no botão Alpha
 MenuFrame.Active = true
+MenuFrame.ZIndex = 10
 MenuFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -140,6 +101,55 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.Parent = MenuFrame
 
+-- ==========================================
+-- BOTÃO ALFA (REDONDO) PARA ABRIR/FECHAR
+-- ==========================================
+local AlphaButton = Instance.new("TextButton")
+AlphaButton.Size = UDim2.fromOffset(50, 50)
+AlphaButton.Position = UDim2.new(0.02, 0, 0.2, 0)
+AlphaButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+AlphaButton.BackgroundTransparency = 0.3
+AlphaButton.Text = "AIM"
+AlphaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AlphaButton.Font = Enum.Font.GothamBold
+AlphaButton.TextSize = 14
+AlphaButton.Active = true
+AlphaButton.ZIndex = 20 -- Fica sempre acima de tudo
+AlphaButton.Parent = ScreenGui
+
+local AlphaCorner = Instance.new("UICorner")
+AlphaCorner.CornerRadius = UDim.new(1, 0)
+AlphaCorner.Parent = AlphaButton
+
+local AlphaStroke = Instance.new("UIStroke")
+AlphaStroke.Thickness = 2
+AlphaStroke.Color = Color3.fromRGB(255, 255, 255)
+AlphaStroke.Parent = AlphaButton
+
+-- Sistema de arrastar o botão Alfa
+local btnDragging, btnDragInput, btnDragStart, btnStartPos
+AlphaButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        btnDragging = true btnDragStart = input.Position btnStartPos = AlphaButton.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then btnDragging = false end end)
+    end
+end)
+AlphaButton.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then btnDragInput = input end end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == btnDragInput and btnDragging then
+        local delta = input.Position - btnDragStart
+        AlphaButton.Position = UDim2.new(btnStartPos.X.Scale, btnStartPos.X.Offset + delta.X, btnStartPos.Y.Scale, btnStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Abre e fecha o menu perfeitamente ao clicar
+AlphaButton.MouseButton1Click:Connect(function() 
+    MenuFrame.Visible = not MenuFrame.Visible 
+end)
+
+-- ==========================================
+-- CRIAÇÃO DOS BOTÕES DO MENU (COM ATIVAÇÃO CORRIGIDA)
+-- ==========================================
 local function createMenuButton(yPos, text)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -30, 0, 35)
@@ -149,6 +159,8 @@ local function createMenuButton(yPos, text)
     btn.TextColor3 = Color3.fromRGB(230, 75, 75)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 11
+    btn.Active = true
+    btn.ZIndex = 12
     btn.Parent = MenuFrame
 
     local corner = Instance.new("UICorner")
@@ -172,6 +184,7 @@ local function createAdjusterFrame(yPos, labelText, defaultValue)
     frame.Position = UDim2.new(0, 15, 0, yPos)
     frame.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
     frame.BorderSizePixel = 0
+    frame.ZIndex = 11
     frame.Parent = MenuFrame
 
     local corner = Instance.new("UICorner")
@@ -187,6 +200,7 @@ local function createAdjusterFrame(yPos, labelText, defaultValue)
     label.Font = Enum.Font.GothamMedium
     label.TextSize = 11
     label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 12
     label.Parent = frame
 
     local input = Instance.new("TextBox")
@@ -198,7 +212,8 @@ local function createAdjusterFrame(yPos, labelText, defaultValue)
     input.Font = Enum.Font.GothamBold
     input.TextSize = 12
     input.ClearTextOnFocus = false
-    input.Parent = input
+    input.ZIndex = 13 -- Mantém a caixa de texto isolada das camadas do botão
+    input.Parent = frame -- CORREÇÃO CRÍTICA DE PARENTING DO INPUT
 
     local inputCorner = Instance.new("UICorner")
     inputCorner.CornerRadius = UDim.new(0, 6)
@@ -211,6 +226,7 @@ local InputAimSmooth = createAdjusterFrame(140, "Aimbot Suavidade (1-50):", aimb
 local InputAimFOV = createAdjusterFrame(185, "Raio Aimbot FOV (10-800):", aimbotFOV)
 local InputSilentFOV = createAdjusterFrame(230, "Raio Silent FOV (10-800):", silentAimFOV)
 
+-- Arrastar o menu principal
 local menuDragging, menuDragInput, menuDragStart, menuStartPos
 MenuFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -226,6 +242,9 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+-- ==========================================
+-- SISTEMA DE INTERRUPÇÃO E ATIVAÇÃO SUAVE DOS BOTÕES
+-- ==========================================
 local function updateBtnStyle(state, btn, stroke, text)
     if state then
         btn.BackgroundColor3 = Color3.fromRGB(30, 40, 35)
@@ -234,13 +253,3 @@ local function updateBtnStyle(state, btn, stroke, text)
         stroke.Color = Color3.fromRGB(75, 230, 130)
     else
         btn.BackgroundColor3 = Color3.fromRGB(40, 30, 32)
-        btn.TextColor3 = Color3.fromRGB(230, 75, 75)
-        btn.Text = text .. ": DESATIVADO"
-        stroke.Color = Color3.fromRGB(230, 75, 75)
-    end
-end
-
-ToggleAimbot.MouseButton1Click:Connect(function() aimbotEnabled = not aimbotEnabled updateBtnStyle(aimbotEnabled, ToggleAimbot, StrokeAimbot, "LOCK-ON AIMBOT") end)
-ToggleSilent.MouseButton1Click:Connect(function() silentAimEnabled = not silentAimEnabled updateBtnStyle(silentAimEnabled, ToggleSilent, StrokeSilent, "SILENT AIM") end)
-
-InputAimSmooth.FocusLost:Connect(function() local n = tonumber(InputAimSmooth.Text) if n then aimbotSmoothness = math.clamp(n, 1, 50) end InputAimSmooth.Text = tostring(aimbotSmoothness) end)
