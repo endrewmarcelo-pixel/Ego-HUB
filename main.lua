@@ -1,47 +1,50 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 -- VARIÁVEIS DE CONTROLE INTERNAS
 local espEnabled = true
 local maxDistance = 1000
 
-local BONE_COLOR = Color3.fromRGB(255, 255, 255) -- Mudado para Branco
-local BONE_THICKNESS = 4 -- Linha mais grossa (antes era 2)
+local BONE_COLOR = Color3.fromRGB(255, 255, 255) -- Branco
+local BONE_THICKNESS = 3 -- Espessura em Pixels
 
--- Pasta para armazenar as linhas
-local ESP_Folder = workspace:FindFirstChild("ESP_Bones_Folder")
-if not ESP_Folder then
-    ESP_Folder = Instance.new("Folder")
-    ESP_Folder.Name = "ESP_Bones_Folder"
-    ESP_Folder.Parent = workspace
-end
+-- Interface Principal (Telas, Menu e Linhas juntas)
+local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ESP_System")
+if ScreenGui then ScreenGui:Destroy() end
 
--- CRIANDO A INTERFACE GRÁFICA (UI) DE CONTROLE
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ESP_Controller"
+ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ESP_System"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.IgnoreGuiInset = true -- Otimiza o alinhamento de tela do Roblox
+ScreenGui.Parent = LocalPlayer.PlayerGui
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 220, 0, 130)
-Frame.Position = UDim2.new(0, 20, 0.4, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Frame.BorderSizePixel = 0
-Frame.Parent = ScreenGui
+-- Pasta de Linhas 2D de Alta Performance (Dentro do ScreenGui para nunca sumir)
+local LinesContainer = Instance.new("Folder")
+LinesContainer.Name = "LinesContainer"
+LinesContainer.Parent = ScreenGui
+
+-- INTERFACE GRÁFICA (UI) DO MENU
+local MenuFrame = Instance.new("Frame")
+MenuFrame.Size = UDim2.new(0, 220, 0, 130)
+MenuFrame.Position = UDim2.new(0, 20, 0.4, 0)
+MenuFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MenuFrame.BorderSizePixel = 0
+MenuFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = Frame
+UICorner.Parent = MenuFrame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "Menu ESP Bone Universal"
+Title.Text = "Menu ESP Bone Screen"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 18
-Title.Parent = Frame
+Title.Parent = MenuFrame
 
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 180, 0, 35)
@@ -51,7 +54,7 @@ ToggleButton.Text = "ESP: ATIVADO"
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 16
-ToggleButton.Parent = Frame
+ToggleButton.Parent = MenuFrame
 
 local ButtonCorner = Instance.new("UICorner")
 ButtonCorner.CornerRadius = UDim.new(0, 6)
@@ -67,13 +70,13 @@ DistanceInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 DistanceInput.Font = Enum.Font.SourceSans
 DistanceInput.TextSize = 16
 DistanceInput.ClearTextOnFocus = false
-DistanceInput.Parent = Frame
+DistanceInput.Parent = MenuFrame
 
 local InputCorner = Instance.new("UICorner")
 InputCorner.CornerRadius = UDim.new(0, 6)
 InputCorner.Parent = DistanceInput
 
--- LÓGICA DA INTERFACE DO USUÁRIO (UI)
+-- LÓGICA DO MENU
 ToggleButton.MouseButton1Click:Connect(function()
     espEnabled = not espEnabled
     if espEnabled then
@@ -82,11 +85,11 @@ ToggleButton.MouseButton1Click:Connect(function()
     else
         ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
         ToggleButton.Text = "ESP: DESATIVADO"
-        ESP_Folder:ClearAllChildren()
+        LinesContainer:ClearAllChildren()
     end
 end)
 
-DistanceInput.FocusLost:Connect(function(enterPressed)
+DistanceInput.FocusLost:Connect(function()
     local numericValue = tonumber(DistanceInput.Text)
     if numericValue then
         maxDistance = math.clamp(numericValue, 10, 5000)
@@ -94,39 +97,42 @@ DistanceInput.FocusLost:Connect(function(enterPressed)
     DistanceInput.Text = tostring(maxDistance)
 end)
 
--- FUNÇÃO DE RENDERIZAÇÃO
-local function drawBoneLine(id, part1, part2)
-    local line = ESP_Folder:FindFirstChild(id)
-    if not line then
-        line = Instance.new("LineHandleAdornment")
-        line.Name = id
-        line.Color3 = BONE_COLOR
-        line.Thickness = BONE_THICKNESS
-        line.AlwaysOnTop = true
-        line.ZIndex = 10
-        line.Parent = ESP_Folder
+-- FUNÇÃO MATEMÁTICA DE PROJEÇÃO DE LINHA NA TELA
+local function updateScreenLine(id, screenPos1, screenPos2)
+    local lineFrame = LinesContainer:FindFirstChild(id)
+    if not lineFrame then
+        lineFrame = Instance.new("Frame")
+        lineFrame.Name = id
+        lineFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+        lineFrame.BackgroundColor3 = BONE_COLOR
+        lineFrame.BorderSizePixel = 0
+        lineFrame.Parent = LinesContainer
     end
-    
-    line.Adornee = part1
-    line.Length = (part1.Position - part2.Position).Magnitude
-    line.CFrame = part1.CFrame:ToObjectSpace(CFrame.lookAt(part1.Position, part2.Position))
+
+    local distance = (screenPos1 - screenPos2).Magnitude
+    local center = (screenPos1 + screenPos2) / 2
+    local angle = math.atan2(screenPos2.Y - screenPos1.Y, screenPos2.X - screenPos1.X)
+
+    lineFrame.Size = UDim2.new(0, distance, 0, BONE_THICKNESS)
+    lineFrame.Position = UDim2.new(0, center.X, 0, center.Y)
+    lineFrame.Rotation = math.rad(angle)
 end
 
 local function clearUnusedLines(activeIds)
-    for _, child in ipairs(ESP_Folder:GetChildren()) do
+    for _, child in ipairs(LinesContainer:GetChildren()) do
         if not activeIds[child.Name] then
             child:Destroy()
         end
     end
 end
 
--- LOOP DE RENDERIZAÇÃO
+-- LOOP PRINCIPAL ATUALIZADO VIA CAMERA (RENDER STEPPED)
 RunService.RenderStepped:Connect(function()
     local activeIds = {}
     
     local myCharacter = LocalPlayer.Character
     if not espEnabled or not myCharacter or not myCharacter:FindFirstChild("HumanoidRootPart") then 
-        ESP_Folder:ClearAllChildren()
+        LinesContainer:ClearAllChildren()
         return 
     end
     
@@ -147,11 +153,23 @@ RunService.RenderStepped:Connect(function()
                             local part0 = object.Part0
                             local part1 = object.Part1
                             
-                            -- FILTROS: Remove a cabeça (Head) e itens segurados (Handle)
+                            -- Mantém os filtros aplicados anteriormente (Sem Cabeça e Sem Itens)
                             if part0.Name ~= "Handle" and part1.Name ~= "Handle" and part0.Name ~= "Head" and part1.Name ~= "Head" then
-                                local lineId = player.Name .. "_" .. part0.Name .. "_" .. part1.Name
-                                activeIds[lineId] = true
-                                drawBoneLine(lineId, part0, part1)
+                                
+                                -- Projeta os pontos 3D reais para a tela do seu monitor
+                                local pos3D_1, onScreen1 = Camera:WorldToViewportPoint(part0.Position)
+                                local pos3D_2, onScreen2 = Camera:WorldToViewportPoint(part1.Position)
+                                
+                                -- Só desenha se ambas as partes estiverem no campo de visão da câmera
+                                if onScreen1 and onScreen2 then
+                                    local lineId = player.Name .. "_" .. part0.Name .. "_" .. part1.Name
+                                    activeIds[lineId] = true
+                                    
+                                    local screenPos1 = Vector2.new(pos3D_1.X, pos3D_1.Y)
+                                    local screenPos2 = Vector2.new(pos3D_2.X, pos3D_2.Y)
+                                    
+                                    updateScreenLine(lineId, screenPos1, screenPos2)
+                                end
                             end
                         end
                     end
