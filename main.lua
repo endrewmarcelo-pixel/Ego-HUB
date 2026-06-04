@@ -1,5 +1,5 @@
 local Players = game:GetService("Players")
-local RunService = game.RunService -- Corrigido para remover o aviso na linha 2
+local RunService = game:GetService("RunService") -- CORREÇÃO DEFINITIVA DA LINHA 2
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -25,7 +25,7 @@ local BONE_STRUCTURE = {
 }
 
 -- ==========================================
--- ESTRUTURA VISUAL DO MENU (UI REDESENHADA)
+-- ESTRUTURA VISUAL DO MENU (UI)
 -- ==========================================
 local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ESP_System_V3")
 if ScreenGui then ScreenGui:Destroy() end
@@ -40,7 +40,6 @@ local LinesContainer = Instance.new("Folder")
 LinesContainer.Name = "LinesContainer"
 LinesContainer.Parent = ScreenGui
 
--- Painel Principal (Aumentado para caber as novas funções)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 260, 0, 280)
 MainFrame.Position = UDim2.new(0.05, 0, 0.30, 0)
@@ -53,7 +52,6 @@ local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
 
--- Gradiente Decorativo Superior
 local TopLine = Instance.new("Frame")
 TopLine.Size = UDim2.new(1, 0, 0, 4)
 TopLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -71,7 +69,6 @@ UIGradient.Color = ColorSequence.new({
 })
 UIGradient.Parent = TopLine
 
--- Cabeçalho / Título
 local HeaderIcon = Instance.new("ImageLabel")
 HeaderIcon.Size = UDim2.new(0, 20, 0, 20)
 HeaderIcon.Position = UDim2.new(0, 15, 0, 15)
@@ -91,7 +88,6 @@ Title.TextSize = 13
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = MainFrame
 
--- Função auxiliar para criar botões padronizados no menu
 local function createMenuButton(yPos, text, iconId)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -30, 0, 38)
@@ -124,12 +120,10 @@ local function createMenuButton(yPos, text, iconId)
     return btn, stroke, icon
 end
 
--- Criando os 3 Botões de Funções
 local ToggleESP, StrokeESP, IconESP = createMenuButton(50, "SKELETON ESP", "rbxassetid://10734950309")
 local ToggleNames, StrokeNames, IconNames = createMenuButton(95, "ESP NAMES", "rbxassetid://10723350179")
 local ToggleNoclip, StrokeNoclip, IconNoclip = createMenuButton(140, "NOCLIP (ATRAVESSAR)", "rbxassetid://10734947470")
 
--- Campo de Distância Ilustrado
 local DistanceFrame = Instance.new("Frame")
 DistanceFrame.Size = UDim2.new(1, -30, 0, 38)
 DistanceFrame.Position = UDim2.new(0, 15, 0, 220)
@@ -215,7 +209,7 @@ DistanceInput.FocusLost:Connect(function()
     DistanceInput.Text = tostring(maxDistance)
 end)
 
--- Sistema Flutuante / Arrastável do Menu
+-- Sistema Flutuante / Arrastável
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -232,7 +226,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- ==========================================
--- RENDERIZADORES DO ESP (LINHAS E NOMES)
+-- RENDERIZADORES
 -- ==========================================
 local function drawLineBetweenPoints(id, p1, p2)
     local lineFrame = LinesContainer:FindFirstChild(id)
@@ -246,3 +240,11 @@ local function drawLineBetweenPoints(id, p1, p2)
     end
     local diff = p2 - p1
     lineFrame.Size = UDim2.fromOffset(diff.Magnitude, BONE_THICKNESS)
+    lineFrame.Position = UDim2.fromOffset((p1 + p2).X / 2, (p1 + p2).Y / 2)
+    lineFrame.Rotation = math.atan2(diff.Y, diff.X) * (180 / math.pi)
+end
+
+local function drawPlayerName(id, position, text)
+    local nameLabel = LinesContainer:FindFirstChild(id)
+    if not nameLabel then
+        nameLabel = Instance.new("TextLabel")
