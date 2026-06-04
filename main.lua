@@ -6,8 +6,8 @@ local LocalPlayer = Players.LocalPlayer
 local espEnabled = true
 local maxDistance = 1000
 
-local BONE_COLOR = Color3.fromRGB(0, 255, 0)
-local BONE_THICKNESS = 2 -- Espessura para LineHandleAdornment (em pixels/escala relativa)
+local BONE_COLOR = Color3.fromRGB(255, 255, 255) -- Mudado para Branco
+local BONE_THICKNESS = 4 -- Linha mais grossa (antes era 2)
 
 -- Pasta para armazenar as linhas
 local ESP_Folder = workspace:FindFirstChild("ESP_Bones_Folder")
@@ -94,7 +94,7 @@ DistanceInput.FocusLost:Connect(function(enterPressed)
     DistanceInput.Text = tostring(maxDistance)
 end)
 
--- FUNÇÃO ATUALIZADA UTILIZANDO LINEHANDLEADORNMENT (RENDERIZAÇÃO GARANTIDA NO WORKSPACE)
+-- FUNÇÃO DE RENDERIZAÇÃO
 local function drawBoneLine(id, part1, part2)
     local line = ESP_Folder:FindFirstChild(id)
     if not line then
@@ -102,12 +102,11 @@ local function drawBoneLine(id, part1, part2)
         line.Name = id
         line.Color3 = BONE_COLOR
         line.Thickness = BONE_THICKNESS
-        line.AlwaysOnTop = true -- Força a exibição através das paredes
+        line.AlwaysOnTop = true
         line.ZIndex = 10
         line.Parent = ESP_Folder
     end
     
-    -- Ancorando dinamicamente ao espaço do mundo 3D
     line.Adornee = part1
     line.Length = (part1.Position - part2.Position).Magnitude
     line.CFrame = part1.CFrame:ToObjectSpace(CFrame.lookAt(part1.Position, part2.Position))
@@ -143,13 +142,13 @@ RunService.RenderStepped:Connect(function()
                 local distance = (myPos - root.Position).Magnitude
                 
                 if distance <= maxDistance then
-                    -- Varre todas as juntas físicas do esqueleto (Funciona em R6, R15 e rigs customizados)
                     for _, object in ipairs(char:GetDescendants()) do
                         if object:IsA("Motor6D") and object.Part0 and object.Part1 then
                             local part0 = object.Part0
                             local part1 = object.Part1
                             
-                            if part0.Name ~= "Handle" and part1.Name ~= "Handle" then
+                            -- FILTROS: Remove a cabeça (Head) e itens segurados (Handle)
+                            if part0.Name ~= "Handle" and part1.Name ~= "Handle" and part0.Name ~= "Head" and part1.Name ~= "Head" then
                                 local lineId = player.Name .. "_" .. part0.Name .. "_" .. part1.Name
                                 activeIds[lineId] = true
                                 drawBoneLine(lineId, part0, part1)
