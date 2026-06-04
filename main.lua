@@ -314,3 +314,80 @@ else
     warn("[PRO EXECUTER] Erro ao carregar o script do GitHub. Verifique sua conexão ou executor.")
 end
 
+        -- =================================================================
+-- DESBLOQUEADOR DE CLIQUE PRO + INJETOR EGO-HUB
+-- =================================================================
+
+local Players = game.Players or game:FindService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+print("[PRO DESBLOQUEADOR] Iniciando varredura de interface...")
+
+-- MOTOR QUE DESCONGELA OS BOTÕES DO EGO-HUB EM TEMPO REAL
+LocalPlayer:WaitForChild("PlayerGui").ChildAdded:Connect(function(gui)
+    if gui:IsA("ScreenGui") then
+        -- Corrige o comportamento global de clique da tela injetada
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        
+        -- Varre tudo o que o Ego-HUB criar e força a ativação
+        local function fixElements(parent)
+            for _, element in ipairs(parent:GetChildren()) do
+                -- Se for um botão travado, destrava na marra
+                if element:IsA("TextButton") or element:IsA("ImageButton") then
+                    element.Active = true
+                    element.Selectable = true
+                    element.Modal = true -- Força o Roblox a priorizar o clique neste botão
+                -- Se for o painel de fundo, garante que ele aceite interações sem congelar
+                elseif element:IsA("Frame") or element:IsA("ScrollingFrame") then
+                    element.Active = true
+                end
+                -- Continua procurando dentro de sub-menus
+                fixElements(element)
+            end
+        end
+        
+        -- Executa a correção imediatamente e monitora novos botões criados pelas abas
+        fixElements(gui)
+        gui.DescendantAdded:Connect(function(descendant)
+            if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+                descendant.Active = true
+                descendant.Selectable = true
+                descendant.Modal = true
+            elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
+                descendant.Active = true
+            end
+        end)
+    end
+end)
+
+-- PROTEÇÃO ANTI-BAN INTERNA (Evita detecção enquanto usa o menu)
+local mt = getrawmetatable(game)
+local oldIndex = mt.__index
+local oldNamecall = mt.__namecall
+setreadonly(mt, false)
+mt.__index = newcclosure(function(self, key)
+    if not checkcaller() and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "JumpPower") then
+        if key == "WalkSpeed" then return 16 end
+        if key == "JumpPower" then return 50 end
+    end
+    return oldIndex(self, key)
+end)
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    if not checkcaller() and (method == "Kick" or method == "kick") then return nil end
+    return oldNamecall(self, ...)
+end)
+setreadonly(mt, true)
+
+-- EXECUTA O EGO-HUB DIRETO COM AS CORREÇÕES ATIVAS
+local success, result = pcall(function()
+    return game:HttpGet("https://githubusercontent.com", true)
+end)
+
+if success and result then
+    loadstring(result)()
+    print("[PRO DESBLOQUEADOR] Ego-HUB injetado. Botões destravados com sucesso!")
+else
+    warn("[PRO DESBLOQUEADOR] Erro ao conectar ao repositório do script.")
+end
+
