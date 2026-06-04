@@ -2,8 +2,8 @@
 -- EGO-HUB 2026 - VERSÃO TOTALMENTE CORRIGIDA E INTEGRADA
 -- ====================================================================
 
--- 1. Carrega a Biblioteca Rayfield com o link correto
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu'))()
+-- 1. Carrega a Biblioteca Rayfield com o link correto (/rayfield)
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- 2. Cria a Janela Principal do Menu
 local Window = Rayfield:CreateWindow({
@@ -24,7 +24,6 @@ local TabFly = Window:CreateTab("Movimento", 4483362458)
 -- ====================================================================
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-
 local wallAtivado = false
 local COR_BRILHO = Color3.fromRGB(0, 255, 0) -- Verde
 local TRANSPARENCIA = 0.5
@@ -33,45 +32,31 @@ local function removerTodosOsDestaques()
     for _, player in ipairs(Players:GetPlayers()) do
         if player.Character then
             local destaque = player.Character:FindFirstChild("DestaqueEgoHub")
-            if destaque then
-                destaque:Destroy()
-            end
+            if destaque then destaque:Destroy() end
         end
     end
 end
 
 local function aplicarDestaque(character)
-    if not wallAtivado or not character then return end
-    if character.Name == LocalPlayer.Name then return end
-
+    if not wallAtivado or not character or character.Name == LocalPlayer.Name then return end
     local root = character:WaitForChild("HumanoidRootPart", 3)
-    if not root then return end
-
-    if not character:FindFirstChild("DestaqueEgoHub") then
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "DestaqueEgoHub"
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.FillColor = COR_BRILHO
-        highlight.FillTransparency = TRANSPARENCIA
-        highlight.OutlineTransparency = 1
-        highlight.Parent = character
-    end
+    if not root or character:FindFirstChild("DestaqueEgoHub") then return end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "DestaqueEgoHub"
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.FillColor = COR_BRILHO
+    highlight.FillTransparency = TRANSPARENCIA
+    highlight.OutlineTransparency = 1
+    highlight.Parent = character
 end
 
 local function conectarJogador(player)
-    player.CharacterAdded:Connect(function(char)
-        if wallAtivado then
-            aplicarDestaque(char)
-        end
-    end)
-    if player.Character and wallAtivado then
-        aplicarDestaque(player.Character)
-    end
+    player.CharacterAdded:Connect(function(char) if wallAtivado then aplicarDestaque(char) end end)
+    if player.Character and wallAtivado then aplicarDestaque(player.Character) end
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
-    conectarJogador(player)
-end
+for _, player in ipairs(Players:GetPlayers()) do conectarJogador(player) end
 Players.PlayerAdded:Connect(conectarJogador)
 
 -- Cria o botão ON/OFF do Wall na aba Visuais
@@ -82,9 +67,7 @@ TabVisual:CreateToggle({
    Callback = function(Value)
        wallAtivado = Value
        if wallAtivado then
-           for _, p in ipairs(Players:GetPlayers()) do
-               if p.Character then aplicarDestaque(p.Character) end
-           end
+           for _, p in ipairs(Players:GetPlayers()) do if p.Character then aplicarDestaque(p.Character) end end
        else
            removerTodosOsDestaques()
        end
@@ -96,52 +79,32 @@ TabVisual:CreateToggle({
 -- ====================================================================
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local camera = workspace.CurrentCamera
-
 local flying = false
-local speed = 50 -- Velocidade inicial padrão
+local speed = 50 
 
-LocalPlayer.CharacterAdded:Connect(function(newCharacter)
-    character = newCharacter
-    hrp = character:WaitForChild("HumanoidRootPart")
-end)
-
--- Cria a força física necessária para o voo
 local attachment = Instance.new("Attachment", hrp)
 local linearVelocity = Instance.new("LinearVelocity", hrp)
 linearVelocity.Attachment0 = attachment
-linearVelocity.MaxForce = math.huge
+linearVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
 linearVelocity.Enabled = false
 
 local function setFlyState(state)
 	flying = state
 	linearVelocity.Enabled = flying
-	
-	if flying then
-		character.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-	else
-		character.Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-	end
+	character.Humanoid:ChangeState(flying and Enum.HumanoidStateType.Physics or Enum.HumanoidStateType.GettingUp)
 end
 
 RunService.RenderStepped:Connect(function()
 	if not flying then return end
-	
 	local direction = Vector3.new(0, 0, 0)
-	
 	if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + camera.CFrame.LookVector end
 	if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - camera.CFrame.LookVector end
 	if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction = direction - camera.CFrame.RightVector end
 	if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction = direction + camera.CFrame.RightVector end
-	
-	if direction.Magnitude > 0 then
-		linearVelocity.VectorVelocity = direction.Unit * speed
-	else
-		linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
-	end
+	linearVelocity.VectorVelocity = direction.Magnitude > 0 and direction.Unit * speed or Vector3.new(0, 0, 0)
 end)
 
 -- Cria o botão ON/OFF do Voo na aba Movimento
@@ -149,12 +112,10 @@ TabFly:CreateToggle({
    Name = "Ativar Modo Voo (FLY)",
    CurrentValue = false,
    Flag = "FlyToggle",
-   Callback = function(Value)
-       setFlyState(Value)
-   end,
+   Callback = function(Value) setFlyState(Value) end,
 })
 
--- Cria o controle deslizante em linha reta (1 ao 300)
+-- Cria o controle deslizante (1 ao 300)
 TabFly:CreateSlider({
    Name = "Velocidade do Voo",
    Range = {1, 300},
@@ -162,15 +123,12 @@ TabFly:CreateSlider({
    Suffix = " Studs/s",
    CurrentValue = 50,
    Flag = "FlySpeedSlider",
-   Callback = function(Value)
-       speed = Value
-   end,
+   Callback = function(Value) speed = Value end,
 })
 
--- Notificação de inicialização bem-sucedida
 Rayfield:Notify({
    Title = "Ego-HUB",
-   Content = "Menu carregado! Sistemas integrados com sucesso.",
+   Content = "Menu carregado! Sistemas integrados.",
    Duration = 5,
    Image = 4483362458,
 })
