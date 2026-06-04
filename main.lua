@@ -110,3 +110,106 @@ Botao.MouseButton1Click:Connect(function()
         removerTodosOsDestaques()
     end
 end)
+-- 1. Carrega a Biblioteca Rayfield
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu'))()
+
+-- 2. Cria a Janela do Menu
+local Window = Rayfield:CreateWindow({
+   Name = "Ego-HUB | Fly Menu",
+   LoadingTitle = "Carregando Interface...",
+   LoadingSubtitle = "Por favor, aguarde",
+   ConfigurationSaving = { Enabled = false },
+   Discord = { Enabled = false },
+   KeySystem = false,
+})
+
+-- 3. Cria a Aba de Funções
+local TabFly = Window:CreateTab("Voo", 4483362458)
+
+-- 4. Variáveis e Lógica do FLY Mode
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local camera = workspace.CurrentCamera
+
+local flying = false
+local speed = 50 -- Velocidade inicial padrão
+
+-- Garante que o script se adapte se o personagem morrer e renascer
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    hrp = character:WaitForChild("HumanoidRootPart")
+end)
+
+-- Cria a força física para o voo
+local attachment = Instance.new("Attachment", hrp)
+local linearVelocity = Instance.new("LinearVelocity", hrp)
+linearVelocity.Attachment0 = attachment
+linearVelocity.MaxForce = math.huge
+linearVelocity.Enabled = false
+
+local function setFlyState(state)
+	flying = state
+	linearVelocity.Enabled = flying
+	
+	if flying then
+		character.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	else
+		character.Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+end
+
+-- Atualiza a direção do voo baseado nos comandos e na câmera
+RunService.RenderStepped:Connect(function()
+	if not flying then return end
+	
+	local direction = Vector3.new(0, 0, 0)
+	
+	if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + camera.CFrame.LookVector end
+	if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - camera.CFrame.LookVector end
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction = direction - camera.CFrame.RightVector end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction = direction + camera.CFrame.RightVector end
+	
+	if direction.Magnitude > 0 then
+		linearVelocity.VectorVelocity = direction.Unit * speed
+	else
+		linearVelocity.VectorVelocity = Vector3.new(0, 0, 0)
+	end
+end)
+
+-- 5. Elementos da Interface
+
+-- Botão ON/OFF do Voo
+TabFly:CreateToggle({
+   Name = "Ativar Modo Voo (FLY)",
+   CurrentValue = false,
+   Flag = "FlyToggle",
+   Callback = function(Value)
+       setFlyState(Value)
+   end,
+})
+
+-- Linha Reta / Slider de Velocidade (1 ao 300)
+TabFly:CreateSlider({
+   Name = "Velocidade do Voo",
+   Range = {1, 300},
+   Increment = 1,
+   Suffix = " Studs/s",
+   CurrentValue = 50,
+   Flag = "FlySpeedSlider",
+   Callback = function(Value)
+       speed = Value -- Atualiza a variável velocidade em tempo real
+   end,
+})
+
+-- Notificação de inicialização bem-sucedida
+Rayfield:Notify({
+   Title = "Ego-HUB",
+   Content = "Menu carregado com controle de velocidade!",
+   Duration = 4,
+   Image = 4483362458,
+})
