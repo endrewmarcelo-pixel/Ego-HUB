@@ -5,6 +5,7 @@
 -- 1. Carrega a Biblioteca Rayfield com o link oficial e estável do GitHub
 local Rayfield = loadstring(game:HttpGet('https://githubusercontent.com'))()
 
+
 -- 2. Cria a Janela Principal do Menu
 local Window = Rayfield:CreateWindow({
    Name = "Ego-HUB | Multi-Hack",
