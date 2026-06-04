@@ -9,7 +9,7 @@ local espEnabled = false
 local maxDistance = 1000
 
 local BONE_COLOR = Color3.fromRGB(255, 255, 255) -- Branco
-local BONE_THICKNESS = 3 -- Espessura correta em pixels
+local BONE_THICKNESS = 2 -- Espessura correta em pixels
 
 -- Tabela estrutural rígida para evitar linhas cruzadas ou deitadas
 local BONE_STRUCTURE = {
