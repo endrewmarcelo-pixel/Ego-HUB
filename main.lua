@@ -1,38 +1,39 @@
--- ACESSO DIRETO SEGURO AO MOTOR DO ROBLOX
+-- ACESSO DIRETO SEGURO AO MOTOR DO ROBLOX (Bypass de erros de injeção)
 local Players = game.Players or game:FindService("Players")
 local RunService = game.RunService or game:FindService("RunService")
 local UserInputService = game.UserInputService or game:FindService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- CONFIGURAÇÕES E ESTADOS INTERNOS
+-- CONFIGURAÇÕES E ESTADOS INTERNES
 local silentAimEnabled = false
+local fovVisible = false
 local silentAimFOV = 120
 
 -- Interface Gráfica Principal
-local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("SilentAim_Gui")
+local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("PrisonLife_Combat_Gui")
 if ScreenGui then ScreenGui:Destroy() end
 
 ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SilentAim_Gui"
+ScreenGui.Name = "PrisonLife_Combat_Gui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = LocalPlayer.PlayerGui
 
 -- ==========================================
--- CÍRCULO VISUAL DO SILENT AIM (FOV)
+-- CÍRCULO VISUAL DO AIM FOV
 -- ==========================================
 local FOVCircle = Instance.new("Frame")
 FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-FOVCircle.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-FOVCircle.BackgroundTransparency = 0.96
+FOVCircle.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Vermelho Combate
+FOVCircle.BackgroundTransparency = 0.97
 FOVCircle.Visible = false
 FOVCircle.ZIndex = 1
 FOVCircle.Parent = ScreenGui
 
 local FOVStroke = Instance.new("UIStroke")
-FOVStroke.Color = Color3.fromRGB(0, 150, 255)
+FOVStroke.Color = Color3.fromRGB(255, 50, 50)
 FOVStroke.Thickness = 1
 FOVStroke.Transparency = 0.4
 FOVStroke.Parent = FOVCircle
@@ -45,7 +46,7 @@ RunService.RenderStepped:Connect(function()
     local viewportSize = Camera.ViewportSize
     FOVCircle.Position = UDim2.fromOffset(viewportSize.X / 2, viewportSize.Y / 2)
     FOVCircle.Size = UDim2.fromOffset(silentAimFOV * 2, silentAimFOV * 2)
-    FOVCircle.Visible = silentAimEnabled
+    FOVCircle.Visible = fovVisible
 end)
 
 -- ==========================================
@@ -56,12 +57,12 @@ local MainFrame = Instance.new("Frame")
 local AlphaButton = Instance.new("TextButton")
 AlphaButton.Size = UDim2.fromOffset(45, 45)
 AlphaButton.Position = UDim2.new(0.02, 0, 0.2, 0)
-AlphaButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+AlphaButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 AlphaButton.BackgroundTransparency = 0.2
-AlphaButton.Text = "SILENT"
+AlphaButton.Text = "COMBAT"
 AlphaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 AlphaButton.Font = Enum.Font.GothamBold
-AlphaButton.TextSize = 9
+AlphaButton.TextSize = 8
 AlphaButton.Active = true
 AlphaButton.ZIndex = 20
 AlphaButton.Parent = ScreenGui
@@ -71,7 +72,7 @@ AlphaCorner.CornerRadius = UDim.new(1, 0)
 AlphaCorner.Parent = AlphaButton
 
 local AlphaStroke = Instance.new("UIStroke")
-AlphaStroke.Thickness = 2
+AlphaStroke.Thickness = 1.5
 AlphaStroke.Color = Color3.fromRGB(255, 255, 255)
 AlphaStroke.Parent = AlphaButton
 
@@ -95,7 +96,7 @@ AlphaButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFra
 -- ==========================================
 -- PAINEL DO MENU PRINCIPAL ARRASTÁVEL
 -- ==========================================
-MainFrame.Size = UDim2.fromOffset(240, 140)
+MainFrame.Size = UDim2.fromOffset(240, 190)
 MainFrame.Position = UDim2.new(0.05, 0, 0.28, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 MainFrame.BorderSizePixel = 0
@@ -110,14 +111,14 @@ MainCorner.Parent = MainFrame
 
 local TopLine = Instance.new("Frame")
 TopLine.Size = UDim2.new(1, 0, 0, 4)
-TopLine.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+TopLine.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 TopLine.BorderSizePixel = 0
 TopLine.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.Position = UDim2.new(0, 0, 0, 4)
-Title.Text = "SILENT AIM CONTROL"
+Title.Text = "PRISON LIFE COMBAT"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
@@ -139,47 +140,54 @@ UserInputService.InputChanged:Connect(function(i)
     end
 end)
 
--- Botão Alternador On/Off
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(1, -30, 0, 34)
-ToggleBtn.Position = UDim2.new(0, 15, 0, 45)
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 11
-ToggleBtn.ZIndex = 11
-ToggleBtn.Parent = MainFrame
+-- Função auxiliar para criar botões On/Off padronizados
+local function createToggle(yPos, text, defaultState, callback)
+    local state = defaultState
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -30, 0, 32)
+    btn.Position = UDim2.new(0, 15, 0, yPos)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 10
+    btn.ZIndex = 11
+    btn.Parent = MainFrame
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = ToggleBtn
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
 
-local BtnStroke = Instance.new("UIStroke")
-BtnStroke.Thickness = 1
-BtnStroke.Parent = ToggleBtn
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 1
+    stroke.Parent = btn
 
-local function updateVisual()
-    if silentAimEnabled then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 35, 30)
-        ToggleBtn.TextColor3 = Color3.fromRGB(75, 220, 130)
-        ToggleBtn.Text = "SILENT AIM: LIGADO"
-        BtnStroke.Color = Color3.fromRGB(75, 220, 130)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 28)
-        ToggleBtn.TextColor3 = Color3.fromRGB(220, 75, 75)
-        ToggleBtn.Text = "SILENT AIM: DESLIGADO"
-        BtnStroke.Color = Color3.fromRGB(220, 75, 75)
+    local function updateVisual()
+        if state then
+            btn.BackgroundColor3 = Color3.fromRGB(25, 35, 30)
+            btn.TextColor3 = Color3.fromRGB(75, 220, 130)
+            btn.Text = text .. ": LIGADO"
+            stroke.Color = Color3.fromRGB(75, 220, 130)
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(35, 25, 28)
+            btn.TextColor3 = Color3.fromRGB(220, 75, 75)
+            btn.Text = text .. ": DESLIGADO"
+            stroke.Color = Color3.fromRGB(220, 75, 75)
+        end
     end
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        updateVisual()
+        callback(state)
+    end)
+    updateVisual()
 end
 
-ToggleBtn.MouseButton1Click:Connect(function()
-    silentAimEnabled = not silentAimEnabled
-    updateVisual()
-end)
-updateVisual()
+createToggle(45, "SILENT AIM", silentAimEnabled, function(v) silentAimEnabled = v end)
+createToggle(82, "EXIBIR CIRCU_LO FOV", fovVisible, function(v) fovVisible = v end)
 
 -- Slider Ajustável do FOV
 local SliderFrame = Instance.new("Frame")
 SliderFrame.Size = UDim2.new(1, -30, 0, 45)
-SliderFrame.Position = UDim2.new(0, 15, 0, 85)
+SliderFrame.Position = UDim2.new(0, 15, 0, 125)
 SliderFrame.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
 SliderFrame.BorderSizePixel = 0
 SliderFrame.ZIndex = 11
@@ -192,7 +200,7 @@ SliderCorner.Parent = SliderFrame
 local SliderLabel = Instance.new("TextLabel")
 SliderLabel.Size = UDim2.new(1, -20, 0, 20)
 SliderLabel.Position = UDim2.new(0, 10, 0, 4)
-SliderLabel.Text = "Raio do FOV: " .. silentAimFOV
+SliderLabel.Text = "Raio do FOV: " .. silentAimFOV .. "px"
 SliderLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
 SliderLabel.BackgroundTransparency = 1
 SliderLabel.Font = Enum.Font.GothamMedium
@@ -215,7 +223,7 @@ BarCorner.Parent = SlideBar
 
 local FillBar = Instance.new("Frame")
 FillBar.Size = UDim2.new((silentAimFOV - 10) / (600 - 10), 0, 1, 0)
-FillBar.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+FillBar.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 FillBar.BorderSizePixel = 0
 FillBar.ZIndex = 13
 FillBar.Parent = SlideBar
@@ -229,7 +237,7 @@ local function slide(input)
     local percentage = math.clamp(rawPercentage, 0, 1)
     FillBar.Size = UDim2.new(percentage, 0, 1, 0)
     local value = math.floor(10 + (percentage * (600 - 10)))
-    SliderLabel.Text = "Raio do FOV: " .. value
+    SliderLabel.Text = "Raio do FOV: " .. value .. "px"
     silentAimFOV = value
 end
 
@@ -249,7 +257,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ==========================================
--- MOTOR MATEMÁTICO INTERNO DO SILENT AIM
+-- MOTOR DE SELEÇÃO DE ALVOS (PRISON LIFE ADAPTADO)
 -- ==========================================
 local function getClosestPlayerToCrosshair()
     local target = nil
@@ -257,10 +265,3 @@ local function getClosestPlayerToCrosshair()
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                local pos, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
-                if onScreen then
-                    local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                    if dist < shortestDistance then
