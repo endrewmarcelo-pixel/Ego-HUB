@@ -1,6 +1,7 @@
-local Players = game:GetService("Players")
+-- ACCESSO DIRETO SEM GETSERVICE (CORREÇÃO ABSOLUTA DA LINHA 1 E 2)
+local Players = game.Players or game:FindService("Players")
 local RunService = game.RunService or game:FindService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local UserInputService = game.UserInputService or game:FindService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -10,9 +11,9 @@ local Camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local silentAimEnabled = false
 
-local aimbotSmoothness = 5 -- Quanto maior, mais lento/disfarçado é o puxão (1 a 50)
-local aimbotFOV = 150       -- Raio do círculo do Aimbot
-local silentAimFOV = 120   -- Raio do círculo do Silent Aim
+local aimbotSmoothness = 5 -- Suavidade do puxão (1 a 50)
+local aimbotFOV = 150       -- Raio do Aimbot
+local silentAimFOV = 120   -- Raio do Silent Aim
 
 -- Interface Principal
 local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("Combat_Menu_Gui")
@@ -52,7 +53,6 @@ end
 local AimbotCircle = createFOVCircle("AimbotFOV", Color3.fromRGB(255, 80, 80), aimbotFOV)
 local SilentCircle = createFOVCircle("SilentFOV", Color3.fromRGB(80, 150, 255), silentAimFOV)
 
--- Atualiza a posição dos círculos no centro da tela
 RunService.RenderStepped:Connect(function()
     local viewportSize = Camera.ViewportSize
     local center = UDim2.fromOffset(viewportSize.X / 2, viewportSize.Y / 2)
@@ -92,7 +92,6 @@ AlphaStroke.Thickness = 2
 AlphaStroke.Color = Color3.fromRGB(255, 255, 255)
 AlphaStroke.Parent = AlphaButton
 
--- Sistema de arrastar o botão Alfa
 local btnDragging, btnDragInput, btnDragStart, btnStartPos
 AlphaButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -111,7 +110,7 @@ end)
 AlphaButton.MouseButton1Click:Connect(function() MenuFrame.Visible = not MenuFrame.Visible end)
 
 -- ==========================================
--- PAINEL DO MENU COMBAT ARRASTÁVEL
+-- PAINEL DO MENU ARRASTÁVEL
 -- ==========================================
 MenuFrame.Size = UDim2.fromOffset(280, 310)
 MenuFrame.Position = UDim2.new(0.05, 0, 0.30, 0)
@@ -141,7 +140,6 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.Parent = MenuFrame
 
--- Função para criar botões On/Off
 local function createMenuButton(yPos, text)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -30, 0, 35)
@@ -168,7 +166,6 @@ end
 local ToggleAimbot, StrokeAimbot = createMenuButton(45, "LOCK-ON AIMBOT")
 local ToggleSilent, StrokeSilent = createMenuButton(90, "SILENT AIM")
 
--- Função para criar caixas de ajuste (Inputs numéricos)
 local function createAdjusterFrame(yPos, labelText, defaultValue)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -30, 0, 35)
@@ -201,7 +198,7 @@ local function createAdjusterFrame(yPos, labelText, defaultValue)
     input.Font = Enum.Font.GothamBold
     input.TextSize = 12
     input.ClearTextOnFocus = false
-    input.Parent = frame
+    input.Parent = input
 
     local inputCorner = Instance.new("UICorner")
     inputCorner.CornerRadius = UDim.new(0, 6)
@@ -214,7 +211,6 @@ local InputAimSmooth = createAdjusterFrame(140, "Aimbot Suavidade (1-50):", aimb
 local InputAimFOV = createAdjusterFrame(185, "Raio Aimbot FOV (10-800):", aimbotFOV)
 local InputSilentFOV = createAdjusterFrame(230, "Raio Silent FOV (10-800):", silentAimFOV)
 
--- Arrastar o menu principal
 local menuDragging, menuDragInput, menuDragStart, menuStartPos
 MenuFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -230,9 +226,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- ==========================================
--- INTERAÇÕES DOS BOTÕES E VALIDAÇÕES
--- ==========================================
 local function updateBtnStyle(state, btn, stroke, text)
     if state then
         btn.BackgroundColor3 = Color3.fromRGB(30, 40, 35)
@@ -248,3 +241,6 @@ local function updateBtnStyle(state, btn, stroke, text)
 end
 
 ToggleAimbot.MouseButton1Click:Connect(function() aimbotEnabled = not aimbotEnabled updateBtnStyle(aimbotEnabled, ToggleAimbot, StrokeAimbot, "LOCK-ON AIMBOT") end)
+ToggleSilent.MouseButton1Click:Connect(function() silentAimEnabled = not silentAimEnabled updateBtnStyle(silentAimEnabled, ToggleSilent, StrokeSilent, "SILENT AIM") end)
+
+InputAimSmooth.FocusLost:Connect(function() local n = tonumber(InputAimSmooth.Text) if n then aimbotSmoothness = math.clamp(n, 1, 50) end InputAimSmooth.Text = tostring(aimbotSmoothness) end)
