@@ -1,15 +1,17 @@
 -- ====================================================================
--- EGO-HUB 2026 - VERSÃO CORRIGIDA COM LINK ATUALIZADO DA RAYFIELD
+-- EGO-HUB 2026 - REPOSITÓRIO ATUALIZADO E LINK ANTIBUG
 -- ====================================================================
 
--- 1. Carrega a Biblioteca Rayfield com o link oficial e atualizado do GitHub
+-- 1. Carrega a Biblioteca Rayfield com o link oficial e estável do GitHub
 local Rayfield = loadstring(game:HttpGet('https://githubusercontent.com'))()
 
 -- 2. Cria a Janela Principal do Menu
 local Window = Rayfield:CreateWindow({
    Name = "Ego-HUB | Multi-Hack",
+   Icon = 0,
    LoadingTitle = "Carregando Interface...",
    LoadingSubtitle = "Por favor, aguarde",
+   Theme = "Default",
    ConfigurationSaving = { Enabled = false },
    Discord = { Enabled = false },
    KeySystem = false,
