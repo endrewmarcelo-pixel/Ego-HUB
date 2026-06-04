@@ -1,26 +1,26 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- VARIÁVEIS DE CONTROLE INTERNAS
-local espEnabled = true
+-- VARIÁVEIS DE CONTROLE INTERNAS (Inicia DESLIGADO)
+local espEnabled = false
 local maxDistance = 1000
 
 local BONE_COLOR = Color3.fromRGB(255, 255, 255) -- Branco
 local BONE_THICKNESS = 3 -- Espessura em Pixels
 
--- Interface Principal (Telas, Menu e Linhas juntas)
+-- Interface Principal
 local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ESP_System")
 if ScreenGui then ScreenGui:Destroy() end
 
 ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ESP_System"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true -- Otimiza o alinhamento de tela do Roblox
+ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = LocalPlayer.PlayerGui
 
--- Pasta de Linhas 2D de Alta Performance (Dentro do ScreenGui para nunca sumir)
 local LinesContainer = Instance.new("Folder")
 LinesContainer.Name = "LinesContainer"
 LinesContainer.Parent = ScreenGui
@@ -31,6 +31,7 @@ MenuFrame.Size = UDim2.new(0, 220, 0, 130)
 MenuFrame.Position = UDim2.new(0, 20, 0.4, 0)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MenuFrame.BorderSizePixel = 0
+MenuFrame.Active = true -- Permite interação de clique no painel
 MenuFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -49,8 +50,8 @@ Title.Parent = MenuFrame
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 180, 0, 35)
 ToggleButton.Position = UDim2.new(0, 20, 0, 35)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-ToggleButton.Text = "ESP: ATIVADO"
+ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0) -- Cor inicial Vermelha
+ToggleButton.Text = "ESP: DESATIVADO" -- Texto inicial Desativado
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 16
@@ -76,7 +77,41 @@ local InputCorner = Instance.new("UICorner")
 InputCorner.CornerRadius = UDim.new(0, 6)
 InputCorner.Parent = DistanceInput
 
--- LÓGICA DO MENU
+-- SCRIPT DE ARRASTAR O MENU (SISTEMA FLUTUANTE)
+local dragging, dragInput, dragStart, startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MenuFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MenuFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MenuFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MenuFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
+end)
+
+-- LÓGICA DO BOTÃO ON/OFF
 ToggleButton.MouseButton1Click:Connect(function()
     espEnabled = not espEnabled
     if espEnabled then
@@ -126,7 +161,7 @@ local function clearUnusedLines(activeIds)
     end
 end
 
--- LOOP PRINCIPAL ATUALIZADO VIA CAMERA (RENDER STEPPED)
+-- LOOP PRINCIPAL ATUALIZADO VIA CAMERA
 RunService.RenderStepped:Connect(function()
     local activeIds = {}
     
@@ -153,14 +188,12 @@ RunService.RenderStepped:Connect(function()
                             local part0 = object.Part0
                             local part1 = object.Part1
                             
-                            -- Mantém os filtros aplicados anteriormente (Sem Cabeça e Sem Itens)
+                            -- Filtros ativos: ignora cabeça e itens equipados nas mãos
                             if part0.Name ~= "Handle" and part1.Name ~= "Handle" and part0.Name ~= "Head" and part1.Name ~= "Head" then
                                 
-                                -- Projeta os pontos 3D reais para a tela do seu monitor
                                 local pos3D_1, onScreen1 = Camera:WorldToViewportPoint(part0.Position)
                                 local pos3D_2, onScreen2 = Camera:WorldToViewportPoint(part1.Position)
                                 
-                                -- Só desenha se ambas as partes estiverem no campo de visão da câmera
                                 if onScreen1 and onScreen2 then
                                     local lineId = player.Name .. "_" .. part0.Name .. "_" .. part1.Name
                                     activeIds[lineId] = true
