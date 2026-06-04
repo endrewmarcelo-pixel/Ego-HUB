@@ -54,6 +54,8 @@ FOVCircle.Visible = false
 FOVCircle.Parent = ScreenGui
 
 local FOVStroke = Instance.new("UIStroke")
+FOVCircle.ZIndex = 1
+FOVCircle.Size = UDim2.fromOffset(silentAimFOV * 2, silentAimFOV * 2)
 FOVStroke.Color = Color3.fromRGB(0, 150, 255)
 FOVStroke.Thickness = 1
 FOVStroke.Transparency = 0.4
@@ -212,7 +214,7 @@ createToggle(85, "ESP BONES", espBonesEnabled, function(v) espBonesEnabled = v D
 createToggle(125, "ESP NAMES", espNamesEnabled, function(v) espNamesEnabled = v DrawingFolder:ClearAllChildren() end)
 createToggle(165, "ESP LIFE (BARRA)", espLifeEnabled, function(v) espLifeEnabled = v DrawingFolder:ClearAllChildren() end)
 
--- Componente: Sliders Ajustáveis (FOV e Distância)
+-- Componente: Sliders Ajustáveis (CORRIGIDO SEM ERROS DE PARENTING)
 local function createSlider(yPos, labelText, min, max, default, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -30, 0, 45)
@@ -261,4 +263,3 @@ local function createSlider(yPos, labelText, min, max, default, callback)
     fillCorner.CornerRadius = UDim.new(1, 0)
     fillCorner.Parent = fill
 
-    local function slide(input)
