@@ -7,9 +7,9 @@ local espEnabled = true
 local maxDistance = 1000
 
 local BONE_COLOR = Color3.fromRGB(0, 255, 0)
-local BONE_THICKNESS = 0.15
+local BONE_THICKNESS = 2 -- Espessura para LineHandleAdornment (em pixels/escala relativa)
 
--- Garante que a pasta do ESP fique no Workspace para evitar problemas de limpeza do PlayerGui
+-- Pasta para armazenar as linhas
 local ESP_Folder = workspace:FindFirstChild("ESP_Bones_Folder")
 if not ESP_Folder then
     ESP_Folder = Instance.new("Folder")
@@ -94,27 +94,23 @@ DistanceInput.FocusLost:Connect(function(enterPressed)
     DistanceInput.Text = tostring(maxDistance)
 end)
 
--- FUNÇÃO PARA DESENHAR AS LINHAS UNIVERSAIS (Adornments)
+-- FUNÇÃO ATUALIZADA UTILIZANDO LINEHANDLEADORNMENT (RENDERIZAÇÃO GARANTIDA NO WORKSPACE)
 local function drawBoneLine(id, part1, part2)
     local line = ESP_Folder:FindFirstChild(id)
     if not line then
-        line = Instance.new("CylinderHandleAdornment")
+        line = Instance.new("LineHandleAdornment")
         line.Name = id
         line.Color3 = BONE_COLOR
-        line.Radius = BONE_THICKNESS
-        line.AlwaysOnTop = true -- Garante visão através das paredes
+        line.Thickness = BONE_THICKNESS
+        line.AlwaysOnTop = true -- Força a exibição através das paredes
         line.ZIndex = 10
         line.Parent = ESP_Folder
     end
     
-    local p1 = part1.Position
-    local p2 = part2.Position
-    local distance = (p1 - p2).Magnitude
-    
-    line.Height = distance
+    -- Ancorando dinamicamente ao espaço do mundo 3D
     line.Adornee = part1
-    -- Alinha perfeitamente o cilindro entre as duas partes do corpo
-    line.CFrame = CFrame.lookAt(p1, p2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.new(-distance / 2, 0, 0)
+    line.Length = (part1.Position - part2.Position).Magnitude
+    line.CFrame = part1.CFrame:ToObjectSpace(CFrame.lookAt(part1.Position, part2.Position))
 end
 
 local function clearUnusedLines(activeIds)
@@ -147,13 +143,12 @@ RunService.RenderStepped:Connect(function()
                 local distance = (myPos - root.Position).Magnitude
                 
                 if distance <= maxDistance then
-                    -- Busca universal baseada em juntas Motor6D (Funciona em R6, R15 e Customizados)
+                    -- Varre todas as juntas físicas do esqueleto (Funciona em R6, R15 e rigs customizados)
                     for _, object in ipairs(char:GetDescendants()) do
                         if object:IsA("Motor6D") and object.Part0 and object.Part1 then
                             local part0 = object.Part0
                             local part1 = object.Part1
                             
-                            -- Ignora conexões com ferramentas/acessórios segurados nas mãos
                             if part0.Name ~= "Handle" and part1.Name ~= "Handle" then
                                 local lineId = player.Name .. "_" .. part0.Name .. "_" .. part1.Name
                                 activeIds[lineId] = true
