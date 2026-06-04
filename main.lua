@@ -4,12 +4,12 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- VARIÁVEIS DE CONTROLE INTERNAS (Inicia DESLIGADO)
+-- VARIÁVEIS DE CONTROLE INTERNAS
 local espEnabled = false
 local maxDistance = 1000
 
-local BONE_COLOR = Color3.fromRGB(255, 255, 255) -- Branco
-local BONE_THICKNESS = 3 -- Espessura em Pixels
+local BONE_COLOR = Color3.fromRGB(255, 255, 255)
+local BONE_THICKNESS = 3
 
 -- Interface Principal
 local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("ESP_System")
@@ -31,7 +31,7 @@ MenuFrame.Size = UDim2.new(0, 220, 0, 130)
 MenuFrame.Position = UDim2.new(0, 20, 0.4, 0)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MenuFrame.BorderSizePixel = 0
-MenuFrame.Active = true -- Permite interação de clique no painel
+MenuFrame.Active = true
 MenuFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -50,8 +50,8 @@ Title.Parent = MenuFrame
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 180, 0, 35)
 ToggleButton.Position = UDim2.new(0, 20, 0, 35)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0) -- Cor inicial Vermelha
-ToggleButton.Text = "ESP: DESATIVADO" -- Texto inicial Desativado
+ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+ToggleButton.Text = "ESP: DESATIVADO"
 ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleButton.Font = Enum.Font.SourceSansBold
 ToggleButton.TextSize = 16
@@ -77,7 +77,7 @@ local InputCorner = Instance.new("UICorner")
 InputCorner.CornerRadius = UDim.new(0, 6)
 InputCorner.Parent = DistanceInput
 
--- SCRIPT DE ARRASTAR O MENU (SISTEMA FLUTUANTE)
+-- SCRIPT DE ARRASTAR O MENU
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
@@ -150,7 +150,7 @@ local function updateScreenLine(id, screenPos1, screenPos2)
 
     lineFrame.Size = UDim2.new(0, distance, 0, BONE_THICKNESS)
     lineFrame.Position = UDim2.new(0, center.X, 0, center.Y)
-    lineFrame.Rotation = math.rad(angle)
+    lineFrame.Rotation = math.deg(angle) -- Corrigido para graus (math.deg) eliminando o lag angular
 end
 
 local function clearUnusedLines(activeIds)
@@ -161,7 +161,7 @@ local function clearUnusedLines(activeIds)
     end
 end
 
--- LOOP PRINCIPAL ATUALIZADO VIA CAMERA
+-- LOOP DE RENDERIZAÇÃO TRAVADO NO FRAME DA CÂMERA (Binds à física exata)
 RunService.RenderStepped:Connect(function()
     local activeIds = {}
     
@@ -183,25 +183,29 @@ RunService.RenderStepped:Connect(function()
                 local distance = (myPos - root.Position).Magnitude
                 
                 if distance <= maxDistance then
+                    -- Procura as juntas físicas reais montadas no momento exato do frame
                     for _, object in ipairs(char:GetDescendants()) do
-                        if object:IsA("Motor6D") and object.Part0 and object.Part1 then
+                        if object:IsA("Motor6D") then
+                            -- Pega a referência direta das peças conectadas em tempo de execução
                             local part0 = object.Part0
                             local part1 = object.Part1
                             
-                            -- Filtros ativos: ignora cabeça e itens equipados nas mãos
-                            if part0.Name ~= "Handle" and part1.Name ~= "Handle" and part0.Name ~= "Head" and part1.Name ~= "Head" then
-                                
-                                local pos3D_1, onScreen1 = Camera:WorldToViewportPoint(part0.Position)
-                                local pos3D_2, onScreen2 = Camera:WorldToViewportPoint(part1.Position)
-                                
-                                if onScreen1 and onScreen2 then
-                                    local lineId = player.Name .. "_" .. part0.Name .. "_" .. part1.Name
-                                    activeIds[lineId] = true
+                            if part0 and part1 and part0:IsA("BasePart") and part1:IsA("BasePart") then
+                                if part0.Name ~= "Handle" and part1.Name ~= "Handle" and part0.Name ~= "Head" and part1.Name ~= "Head" then
                                     
-                                    local screenPos1 = Vector2.new(pos3D_1.X, pos3D_1.Y)
-                                    local screenPos2 = Vector2.new(pos3D_2.X, pos3D_2.Y)
+                                    -- Lê a posição no espaço do mundo diretamente da peça geométrica
+                                    local pos3D_1, onScreen1 = Camera:WorldToViewportPoint(part0.Position)
+                                    local pos3D_2, onScreen2 = Camera:WorldToViewportPoint(part1.Position)
                                     
-                                    updateScreenLine(lineId, screenPos1, screenPos2)
+                                    if onScreen1 and onScreen2 then
+                                        local lineId = player.Name .. "_" .. part0.Name .. "_" .. part1.Name
+                                        activeIds[lineId] = true
+                                        
+                                        local screenPos1 = Vector2.new(pos3D_1.X, pos3D_1.Y)
+                                        local screenPos2 = Vector2.new(pos3D_2.X, pos3D_2.Y)
+                                        
+                                        updateScreenLine(lineId, screenPos1, screenPos2)
+                                    end
                                 end
                             end
                         end
