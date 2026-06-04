@@ -1,9 +1,9 @@
 -- ====================================================================
--- EGO-HUB 2026 - VERSÃO TOTALMENTE CORRIGIDA E INTEGRADA
+-- EGO-HUB 2026 - VERSÃO CORRIGIDA COM LINK ATUALIZADO DA RAYFIELD
 -- ====================================================================
 
--- 1. Carrega a Biblioteca Rayfield com o link correto (/rayfield)
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- 1. Carrega a Biblioteca Rayfield com o link oficial e atualizado do GitHub
+local Rayfield = loadstring(game:HttpGet('https://githubusercontent.com'))()
 
 -- 2. Cria a Janela Principal do Menu
 local Window = Rayfield:CreateWindow({
@@ -59,7 +59,6 @@ end
 for _, player in ipairs(Players:GetPlayers()) do conectarJogador(player) end
 Players.PlayerAdded:Connect(conectarJogador)
 
--- Cria o botão ON/OFF do Wall na aba Visuais
 TabVisual:CreateToggle({
    Name = "Modo Wall (Highlight ESP)",
    CurrentValue = false,
@@ -94,11 +93,13 @@ linearVelocity.Enabled = false
 local function setFlyState(state)
 	flying = state
 	linearVelocity.Enabled = flying
-	character.Humanoid:ChangeState(flying and Enum.HumanoidStateType.Physics or Enum.HumanoidStateType.GettingUp)
+    if character and character:FindFirstChild("Humanoid") then
+	    character.Humanoid:ChangeState(flying and Enum.HumanoidStateType.Physics or Enum.HumanoidStateType.GettingUp)
+    end
 end
 
 RunService.RenderStepped:Connect(function()
-	if not flying then return end
+	if not flying or not hrp then return end
 	local direction = Vector3.new(0, 0, 0)
 	if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + camera.CFrame.LookVector end
 	if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - camera.CFrame.LookVector end
@@ -107,7 +108,6 @@ RunService.RenderStepped:Connect(function()
 	linearVelocity.VectorVelocity = direction.Magnitude > 0 and direction.Unit * speed or Vector3.new(0, 0, 0)
 end)
 
--- Cria o botão ON/OFF do Voo na aba Movimento
 TabFly:CreateToggle({
    Name = "Ativar Modo Voo (FLY)",
    CurrentValue = false,
@@ -115,7 +115,6 @@ TabFly:CreateToggle({
    Callback = function(Value) setFlyState(Value) end,
 })
 
--- Cria o controle deslizante (1 ao 300)
 TabFly:CreateSlider({
    Name = "Velocidade do Voo",
    Range = {1, 300},
