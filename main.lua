@@ -1,11 +1,9 @@
--- ACESSO DIRETO SEGURO AO MOTOR DO ROBLOX (Bypass de erros de injeção)
-local Players = game.Players or game:FindService("Players")
-local RunService = game.RunService or game:FindService("RunService")
-local UserInputService = game.UserInputService or game:FindService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+-- AMBIENTE 100% BLINDADO (SEM ENUM, SEM GETSERVICE, SEM GAME.PLAYERS)
+local Workspace = workspace
+local Camera = Workspace.CurrentCamera
+local LocalPlayer = game:findFirstChildOfClass("Players").LocalPlayer
 
--- CONFIGURAÇÕES E ESTADOS INTERNES
+-- CONFIGURAÇÕES E ESTADOS INTERNOS
 local silentAimEnabled = false
 local fovVisible = false
 local silentAimFOV = 120
@@ -26,7 +24,7 @@ ScreenGui.Parent = LocalPlayer.PlayerGui
 -- ==========================================
 local FOVCircle = Instance.new("Frame")
 FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-FOVCircle.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Vermelho Combate
+FOVCircle.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 FOVCircle.BackgroundTransparency = 0.97
 FOVCircle.Visible = false
 FOVCircle.ZIndex = 1
@@ -42,7 +40,8 @@ local FOVCorner = Instance.new("UICorner")
 FOVCorner.CornerRadius = UDim.new(1, 0)
 FOVCorner.Parent = FOVCircle
 
-RunService.RenderStepped:Connect(function()
+-- Loop de renderização seguro nativo do Roblox
+game.RunService.RenderStepped:Connect(function()
     local viewportSize = Camera.ViewportSize
     FOVCircle.Position = UDim2.fromOffset(viewportSize.X / 2, viewportSize.Y / 2)
     FOVCircle.Size = UDim2.fromOffset(silentAimFOV * 2, silentAimFOV * 2)
@@ -76,7 +75,7 @@ AlphaStroke.Thickness = 1.5
 AlphaStroke.Color = Color3.fromRGB(255, 255, 255)
 AlphaStroke.Parent = AlphaButton
 
--- Arrastador do Botão Alfa
+-- Arrastador nativo do Botão Alfa baseado em cliques
 local bDrag, bStart, bPos
 AlphaButton.InputBegan:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
@@ -84,7 +83,7 @@ AlphaButton.InputBegan:Connect(function(i)
         i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then bDrag = false end end)
     end
 end)
-UserInputService.InputChanged:Connect(function(i)
+game.UserInputService.InputChanged:Connect(function(i)
     if bDrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
         local d = i.Position - bStart
         AlphaButton.Position = UDim2.new(bPos.X.Scale, bPos.X.Offset + d.X, bPos.Y.Scale, bPos.Y.Offset + d.Y)
@@ -133,14 +132,14 @@ MainFrame.InputBegan:Connect(function(i)
         i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then mDrag = false end end)
     end
 end)
-UserInputService.InputChanged:Connect(function(i)
+game.UserInputService.InputChanged:Connect(function(i)
     if mDrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
         local d = i.Position - mStart
         MainFrame.Position = UDim2.new(mPos.X.Scale, mPos.X.Offset + d.X, mPos.Y.Scale, mPos.Y.Offset + d.Y)
     end
 end)
 
--- Função auxiliar para criar botões On/Off padronizados
+-- Função para criar botões On/Off
 local function createToggle(yPos, text, defaultState, callback)
     local state = defaultState
     local btn = Instance.new("TextButton")
@@ -247,21 +246,24 @@ SlideBar.InputBegan:Connect(function(input)
         sliding = true slide(input)
     end
 end)
-UserInputService.InputChanged:Connect(function(input)
+game.UserInputService.InputChanged:Connect(function(input)
     if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         slide(input)
     end
 end)
-UserInputService.InputEnded:Connect(function(input)
+game.UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = false end
 end)
 
 -- ==========================================
--- MOTOR DE SELEÇÃO DE ALVOS (PRISON LIFE ADAPTADO)
+-- MOTOR DE SELEÇÃO DE ALVOS
 -- ==========================================
 local function getClosestPlayerToCrosshair()
     local target = nil
     local shortestDistance = silentAimFOV
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local allPlayers = game:findFirstChildOfClass("Players"):GetPlayers()
 
-    for _, p in ipairs(Players:GetPlayers()) do
+    for _, p in ipairs(allPlayers) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
