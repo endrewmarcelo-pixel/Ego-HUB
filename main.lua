@@ -4,18 +4,18 @@ local LocalPlayer = Players.LocalPlayer
 
 -- VARIÁVEIS DE CONTROLE INTERNAS
 local espEnabled = true
-local maxDistance = 1000 -- Distância padrão inicial
+local maxDistance = 1000
 
 local BONE_COLOR = Color3.fromRGB(0, 255, 0)
 local BONE_THICKNESS = 0.15
 
-local R15_BONES = {
-    {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
-    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
-}
+-- Garante que a pasta do ESP fique no Workspace para evitar problemas de limpeza do PlayerGui
+local ESP_Folder = workspace:FindFirstChild("ESP_Bones_Folder")
+if not ESP_Folder then
+    ESP_Folder = Instance.new("Folder")
+    ESP_Folder.Name = "ESP_Bones_Folder"
+    ESP_Folder.Parent = workspace
+end
 
 -- CRIANDO A INTERFACE GRÁFICA (UI) DE CONTROLE
 local ScreenGui = Instance.new("ScreenGui")
@@ -30,21 +30,19 @@ Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.BorderSizePixel = 0
 Frame.Parent = ScreenGui
 
--- Cantos arredondados na UI
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = Frame
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "Menu ESP Bone"
+Title.Text = "Menu ESP Bone Universal"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 18
 Title.Parent = Frame
 
--- Botão de On/Off
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Size = UDim2.new(0, 180, 0, 35)
 ToggleButton.Position = UDim2.new(0, 20, 0, 35)
@@ -59,7 +57,6 @@ local ButtonCorner = Instance.new("UICorner")
 ButtonCorner.CornerRadius = UDim.new(0, 6)
 ButtonCorner.Parent = ToggleButton
 
--- Caixa de texto para digitar a distância
 local DistanceInput = Instance.new("TextBox")
 DistanceInput.Size = UDim2.new(0, 180, 0, 35)
 DistanceInput.Position = UDim2.new(0, 20, 0, 80)
@@ -85,23 +82,19 @@ ToggleButton.MouseButton1Click:Connect(function()
     else
         ToggleButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
         ToggleButton.Text = "ESP: DESATIVADO"
+        ESP_Folder:ClearAllChildren()
     end
 end)
 
 DistanceInput.FocusLost:Connect(function(enterPressed)
     local numericValue = tonumber(DistanceInput.Text)
     if numericValue then
-        -- Força o valor inserido a ficar estritamente entre 10 e 5000
         maxDistance = math.clamp(numericValue, 10, 5000)
     end
     DistanceInput.Text = tostring(maxDistance)
 end)
 
--- SISTEMA DO ESP BONE (RENDERIZAÇÃO)
-local ESP_Folder = Instance.new("Folder")
-ESP_Folder.Name = "ESP_Bones_Folder"
-ESP_Folder.Parent = LocalPlayer.PlayerGui
-
+-- FUNÇÃO PARA DESENHAR AS LINHAS UNIVERSAIS (Adornments)
 local function drawBoneLine(id, part1, part2)
     local line = ESP_Folder:FindFirstChild(id)
     if not line then
@@ -109,7 +102,7 @@ local function drawBoneLine(id, part1, part2)
         line.Name = id
         line.Color3 = BONE_COLOR
         line.Radius = BONE_THICKNESS
-        line.AlwaysOnTop = true
+        line.AlwaysOnTop = true -- Garante visão através das paredes
         line.ZIndex = 10
         line.Parent = ESP_Folder
     end
@@ -120,6 +113,7 @@ local function drawBoneLine(id, part1, part2)
     
     line.Height = distance
     line.Adornee = part1
+    -- Alinha perfeitamente o cilindro entre as duas partes do corpo
     line.CFrame = CFrame.lookAt(p1, p2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.new(-distance / 2, 0, 0)
 end
 
@@ -131,10 +125,10 @@ local function clearUnusedLines(activeIds)
     end
 end
 
+-- LOOP DE RENDERIZAÇÃO
 RunService.RenderStepped:Connect(function()
     local activeIds = {}
     
-    -- Se o ESP estiver desligado ou seu personagem sumir, limpa as linhas e ignora o frame
     local myCharacter = LocalPlayer.Character
     if not espEnabled or not myCharacter or not myCharacter:FindFirstChild("HumanoidRootPart") then 
         ESP_Folder:ClearAllChildren()
@@ -152,16 +146,19 @@ RunService.RenderStepped:Connect(function()
             if root and hum and hum.Health > 0 then
                 local distance = (myPos - root.Position).Magnitude
                 
-                -- Usa o valor em tempo real configurado na UI
                 if distance <= maxDistance then
-                    for _, bonePair in ipairs(R15_BONES) do
-                        local part1 = char:FindFirstChild(bonePair[1])
-                        local part2 = char:FindFirstChild(bonePair[2])
-                        
-                        if part1 and part2 and part1:IsA("BasePart") and part2:IsA("BasePart") then
-                            local lineId = player.Name .. "_" .. bonePair[1] .. "_" .. bonePair[2]
-                            activeIds[lineId] = true
-                            drawBoneLine(lineId, part1, part2)
+                    -- Busca universal baseada em juntas Motor6D (Funciona em R6, R15 e Customizados)
+                    for _, object in ipairs(char:GetDescendants()) do
+                        if object:IsA("Motor6D") and object.Part0 and object.Part1 then
+                            local part0 = object.Part0
+                            local part1 = object.Part1
+                            
+                            -- Ignora conexões com ferramentas/acessórios segurados nas mãos
+                            if part0.Name ~= "Handle" and part1.Name ~= "Handle" then
+                                local lineId = player.Name .. "_" .. part0.Name .. "_" .. part1.Name
+                                activeIds[lineId] = true
+                                drawBoneLine(lineId, part0, part1)
+                            end
                         end
                     end
                 end
