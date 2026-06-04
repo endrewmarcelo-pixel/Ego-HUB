@@ -2,10 +2,10 @@
 -- EGO-HUB 2026 - VERSÃO NATIVA SEM BUGS (CORRIGIDO)
 -- ====================================================================
 
-local Players = game:GetService("Players") -- Correção do erro da linha 2
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
+
 
 local LocalPlayer = Players.LocalPlayer
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
