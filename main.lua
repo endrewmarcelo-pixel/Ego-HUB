@@ -12,32 +12,36 @@
     local UICorner_Btn = Instance.new("UICorner")
     local UICorner_Close = Instance.new("UICorner")
 
-    ScreenGui.Name = "EgoHub_PlaceJobTeleporter"
+    -- Configuração do ScreenGui
+    ScreenGui.Name = "EgoHub_CustomTeleporter"
     ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
     ScreenGui.ResetOnSpawn = false
 
+    -- Janela Principal (GUI)
     MainFrame.Name = "MainFrame"
     MainFrame.Parent = ScreenGui
     MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     MainFrame.Position = UDim2.new(0.5, -125, 0.4, -85)
-    MainFrame.Size = UDim2.new(0, 250, 0, 170)
+    MainFrame.Size = UDim2.new(0, 250, 0, 175)
     MainFrame.Active = true
     MainFrame.Draggable = true 
 
     UICorner_Frame.CornerRadius = UDim.new(0, 8)
     UICorner_Frame.Parent = MainFrame
 
+    -- Título da Janela
     TitleLabel.Name = "TitleLabel"
     TitleLabel.Parent = MainFrame
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Position = UDim2.new(0, 10, 0, 5)
     TitleLabel.Size = UDim2.new(0, 200, 0, 25)
     TitleLabel.Font = Enum.Font.SourceSansBold
-    TitleLabel.Text = "EGO-HUB: PLACE & JOB TELEPORT"
+    TitleLabel.Text = "TELEPORTE: PLACE & JOB"
     TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TitleLabel.TextSize = 13
+    TitleLabel.TextSize = 14
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
+    -- Botão Fechar (X)
     CloseButton.Name = "CloseButton"
     CloseButton.Parent = MainFrame
     CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -52,14 +56,14 @@
     UICorner_Close.Parent = CloseButton
     CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
-    -- Caixa do Place ID
+    -- Caixinha 1: Place ID
     PlaceBox.Name = "PlaceBox"
     PlaceBox.Parent = MainFrame
     PlaceBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     PlaceBox.Position = UDim2.new(0.05, 0, 0.22, 0)
     PlaceBox.Size = UDim2.new(0.9, 0, 0, 30)
     PlaceBox.Font = Enum.Font.SourceSans
-    PlaceBox.PlaceholderText = "Cole o Place ID aqui..."
+    PlaceBox.PlaceholderText = "Digite o Place ID..."
     PlaceBox.Text = ""
     PlaceBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     PlaceBox.TextSize = 14
@@ -68,7 +72,7 @@
     UICorner_Place.CornerRadius = UDim.new(0, 5)
     UICorner_Place.Parent = PlaceBox
 
-    -- Caixa do Job ID
+    -- Caixinha 2: Job ID
     JobBox.Name = "JobBox"
     JobBox.Parent = MainFrame
     JobBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -84,7 +88,7 @@
     UICorner_Job.CornerRadius = UDim.new(0, 5)
     UICorner_Job.Parent = JobBox
 
-    -- Botão Conectar
+    -- Botão para Executar Ação
     TeleportButton.Name = "TeleportButton"
     TeleportButton.Parent = MainFrame
     TeleportButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
@@ -98,6 +102,7 @@
     UICorner_Btn.CornerRadius = UDim.new(0, 5)
     UICorner_Btn.Parent = TeleportButton
 
+    -- Lógica do Teleporte Seguro com Tratamento de Erros
     TeleportButton.MouseButton1Click:Connect(function()
         local targetPlace = tonumber(PlaceBox.Text:gsub("%s+", ""))
         local targetJob = JobBox.Text:gsub("%s+", "")
@@ -107,12 +112,13 @@
             TeleportButton.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
             task.wait(0.3)
             
+            -- O pcall previne quedas do script caso o servidor esteja restrito
             local success, err = pcall(function()
                 game:GetService("TeleportService"):TeleportToPlaceInstance(targetPlace, targetJob, game:GetService("Players").LocalPlayer)
             end)
             
             if not success then
-                TeleportButton.Text = "Erro / ID Inválido!"
+                TeleportButton.Text = "Erro / Local Restrito"
                 TeleportButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
                 task.wait(2)
                 TeleportButton.Text = "TELEPORTAR"
@@ -125,5 +131,4 @@
             TeleportButton.Text = "TELEPORTAR"
             TeleportButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
         end
-    end)
-]])()
+    end
