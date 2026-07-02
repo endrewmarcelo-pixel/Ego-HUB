@@ -1,4 +1,4 @@
-
+loadstring([[
     local ScreenGui = Instance.new("ScreenGui")
     local MainFrame = Instance.new("Frame")
     local TitleLabel = Instance.new("TextLabel")
@@ -131,4 +131,5 @@
             TeleportButton.Text = "TELEPORTAR"
             TeleportButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
         end
-    end
+    end)
+]])()
