@@ -1,269 +1,120 @@
--- AMBIENTE 100% BLINDADO (SEM ENUM, SEM GETSERVICE, SEM GAME.PLAYERS)
-local Workspace = workspace
-local Camera = Workspace.CurrentCamera
-local LocalPlayer = game:findFirstChildOfClass("Players").LocalPlayer
-
--- CONFIGURAÇÕES E ESTADOS INTERNOS
-local silentAimEnabled = false
-local fovVisible = false
-local silentAimFOV = 120
-
--- Interface Gráfica Principal
-local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("PrisonLife_Combat_Gui")
-if ScreenGui then ScreenGui:Destroy() end
-
-ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PrisonLife_Combat_Gui"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = LocalPlayer.PlayerGui
-
--- ==========================================
--- CÍRCULO VISUAL DO AIM FOV
--- ==========================================
-local FOVCircle = Instance.new("Frame")
-FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-FOVCircle.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-FOVCircle.BackgroundTransparency = 0.97
-FOVCircle.Visible = false
-FOVCircle.ZIndex = 1
-FOVCircle.Parent = ScreenGui
-
-local FOVStroke = Instance.new("UIStroke")
-FOVStroke.Color = Color3.fromRGB(255, 50, 50)
-FOVStroke.Thickness = 1
-FOVStroke.Transparency = 0.4
-FOVStroke.Parent = FOVCircle
-
-local FOVCorner = Instance.new("UICorner")
-FOVCorner.CornerRadius = UDim.new(1, 0)
-FOVCorner.Parent = FOVCircle
-
--- Loop de renderização seguro nativo do Roblox
-game.RunService.RenderStepped:Connect(function()
-    local viewportSize = Camera.ViewportSize
-    FOVCircle.Position = UDim2.fromOffset(viewportSize.X / 2, viewportSize.Y / 2)
-    FOVCircle.Size = UDim2.fromOffset(silentAimFOV * 2, silentAimFOV * 2)
-    FOVCircle.Visible = fovVisible
-end)
-
--- ==========================================
--- BOTÃO ALFA REDONDO (ABRIR / FECHAR)
--- ==========================================
+-- Criando a Interface Gráfica Segura
+local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
+local TitleLabel = Instance.new("TextLabel")
+local TextBox = Instance.new("TextBox")
+local TeleportButton = Instance.new("TextButton")
+local CloseButton = Instance.new("TextButton")
+local UICorner_Frame = Instance.new("UICorner")
+local UICorner_Box = Instance.new("UICorner")
+local UICorner_Btn = Instance.new("UICorner")
+local UICorner_Close = Instance.new("UICorner")
 
-local AlphaButton = Instance.new("TextButton")
-AlphaButton.Size = UDim2.fromOffset(45, 45)
-AlphaButton.Position = UDim2.new(0.02, 0, 0.2, 0)
-AlphaButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-AlphaButton.BackgroundTransparency = 0.2
-AlphaButton.Text = "COMBAT"
-AlphaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-AlphaButton.Font = Enum.Font.GothamBold
-AlphaButton.TextSize = 8
-AlphaButton.Active = true
-AlphaButton.ZIndex = 20
-AlphaButton.Parent = ScreenGui
+-- Configurando a Janela Principal
+ScreenGui.Name = "TeleportGui_AntiCrash"
+ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
 
-local AlphaCorner = Instance.new("UICorner")
-AlphaCorner.CornerRadius = UDim.new(1, 0)
-AlphaCorner.Parent = AlphaButton
-
-local AlphaStroke = Instance.new("UIStroke")
-AlphaStroke.Thickness = 1.5
-AlphaStroke.Color = Color3.fromRGB(255, 255, 255)
-AlphaStroke.Parent = AlphaButton
-
--- Arrastador nativo do Botão Alfa baseado em cliques
-local bDrag, bStart, bPos
-AlphaButton.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        bDrag = true bStart = i.Position bPos = AlphaButton.Position
-        i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then bDrag = false end end)
-    end
-end)
-game.UserInputService.InputChanged:Connect(function(i)
-    if bDrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-        local d = i.Position - bStart
-        AlphaButton.Position = UDim2.new(bPos.X.Scale, bPos.X.Offset + d.X, bPos.Y.Scale, bPos.Y.Offset + d.Y)
-    end
-end)
-
-AlphaButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-
--- ==========================================
--- PAINEL DO MENU PRINCIPAL ARRASTÁVEL
--- ==========================================
-MainFrame.Size = UDim2.fromOffset(240, 190)
-MainFrame.Position = UDim2.new(0.05, 0, 0.28, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-MainFrame.BorderSizePixel = 0
-MainFrame.Visible = false
-MainFrame.Active = true
-MainFrame.ZIndex = 10
+MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+MainFrame.Position = UDim2.new(0.5, -125, 0.4, -65)
+MainFrame.Size = UDim2.new(0, 250, 0, 130)
+MainFrame.Active = true
+MainFrame.Draggable = true 
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
+UICorner_Frame.CornerRadius = UDim.new(0, 8)
+UICorner_Frame.Parent = MainFrame
 
-local TopLine = Instance.new("Frame")
-TopLine.Size = UDim2.new(1, 0, 0, 4)
-TopLine.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-TopLine.BorderSizePixel = 0
-TopLine.Parent = MainFrame
+-- Título
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Parent = MainFrame
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Position = UDim2.new(0, 10, 0, 5)
+TitleLabel.Size = UDim2.new(0, 200, 0, 25)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.Text = "TELEPORTE POR JOB ID"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 16
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.Position = UDim2.new(0, 0, 0, 4)
-Title.Text = "PRISON LIFE COMBAT"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundTransparency = 1
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 12
-Title.Parent = MainFrame
+-- Botão de Fechar [X]
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = MainFrame
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Position = UDim2.new(0.85, 0, 0.05, 0)
+CloseButton.Size = UDim2.new(0, 25, 0, 25)
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 14
 
--- Arrastador do Menu Principal
-local mDrag, mStart, mPos
-MainFrame.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        mDrag = true mStart = i.Position mPos = MainFrame.Position
-        i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then mDrag = false end end)
-    end
+UICorner_Close.CornerRadius = UDim.new(0, 5)
+UICorner_Close.Parent = CloseButton
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
 end)
-game.UserInputService.InputChanged:Connect(function(i)
-    if mDrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-        local d = i.Position - mStart
-        MainFrame.Position = UDim2.new(mPos.X.Scale, mPos.X.Offset + d.X, mPos.Y.Scale, mPos.Y.Offset + d.Y)
-    end
-end)
 
--- Função para criar botões On/Off
-local function createToggle(yPos, text, defaultState, callback)
-    local state = defaultState
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -30, 0, 32)
-    btn.Position = UDim2.new(0, 15, 0, yPos)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 10
-    btn.ZIndex = 11
-    btn.Parent = MainFrame
+-- Caixinha de Escrita
+TextBox.Name = "TextBox"
+TextBox.Parent = MainFrame
+TextBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+TextBox.Position = UDim2.new(0.05, 0, 0.3, 0)
+TextBox.Size = UDim2.new(0.9, 0, 0, 30)
+TextBox.Font = Enum.Font.SourceSans
+TextBox.PlaceholderText = "Cole o Job ID aqui..."
+TextBox.Text = ""
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.TextSize = 14
+TextBox.ClearTextOnFocus = false
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = btn
+UICorner_Box.CornerRadius = UDim.new(0, 5)
+UICorner_Box.Parent = TextBox
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = 1
-    stroke.Parent = btn
+-- Botão de Executar
+TeleportButton.Name = "TeleportButton"
+TeleportButton.Parent = MainFrame
+TeleportButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+TeleportButton.Position = UDim2.new(0.05, 0, 0.65, 0)
+TeleportButton.Size = UDim2.new(0.9, 0, 0, 35)
+TeleportButton.Font = Enum.Font.SourceSansBold
+TeleportButton.Text = "TELEPORTAR"
+TeleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportButton.TextSize = 16
 
-    local function updateVisual()
-        if state then
-            btn.BackgroundColor3 = Color3.fromRGB(25, 35, 30)
-            btn.TextColor3 = Color3.fromRGB(75, 220, 130)
-            btn.Text = text .. ": LIGADO"
-            stroke.Color = Color3.fromRGB(75, 220, 130)
-        else
-            btn.BackgroundColor3 = Color3.fromRGB(35, 25, 28)
-            btn.TextColor3 = Color3.fromRGB(220, 75, 75)
-            btn.Text = text .. ": DESLIGADO"
-            stroke.Color = Color3.fromRGB(220, 75, 75)
+UICorner_Btn.CornerRadius = UDim.new(0, 5)
+UICorner_Btn.Parent = TeleportButton
+
+-- Função de Teleporte Tratada
+TeleportButton.MouseButton1Click:Connect(function()
+    local targetId = TextBox.Text:gsub("%s+", "") -- Limpa espaços
+    
+    if targetId ~= "" and targetId ~= "Cole o Job ID aqui..." then
+        TeleportButton.Text = "Verificando Restrições..."
+        TeleportButton.BackgroundColor3 = Color3.fromRGB(255, 150, 0)
+        task.wait(0.5)
+        
+        local placeId = game.PlaceId
+        local teleportService = game:GetService("TeleportService")
+        local localPlayer = game:GetService("Players").LocalPlayer
+        
+        -- O pcall protege o script de fechar o jogo em caso de erro de restrição
+        local success, err = pcall(function()
+            teleportService:TeleportToPlaceInstance(placeId, targetId, localPlayer)
+        end)
+        
+        if not success then
+            TeleportButton.Text = "Local Restrito / Erro!"
+            TeleportButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+            task.wait(2.5)
+            TeleportButton.Text = "TELEPORTAR"
+            TeleportButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
         end
-    end
-
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        updateVisual()
-        callback(state)
-    end)
-    updateVisual()
-end
-
-createToggle(45, "SILENT AIM", silentAimEnabled, function(v) silentAimEnabled = v end)
-createToggle(82, "EXIBIR CIRCU_LO FOV", fovVisible, function(v) fovVisible = v end)
-
--- Slider Ajustável do FOV
-local SliderFrame = Instance.new("Frame")
-SliderFrame.Size = UDim2.new(1, -30, 0, 45)
-SliderFrame.Position = UDim2.new(0, 15, 0, 125)
-SliderFrame.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
-SliderFrame.BorderSizePixel = 0
-SliderFrame.ZIndex = 11
-SliderFrame.Parent = MainFrame
-
-local SliderCorner = Instance.new("UICorner")
-SliderCorner.CornerRadius = UDim.new(0, 6)
-SliderCorner.Parent = SliderFrame
-
-local SliderLabel = Instance.new("TextLabel")
-SliderLabel.Size = UDim2.new(1, -20, 0, 20)
-SliderLabel.Position = UDim2.new(0, 10, 0, 4)
-SliderLabel.Text = "Raio do FOV: " .. silentAimFOV .. "px"
-SliderLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
-SliderLabel.BackgroundTransparency = 1
-SliderLabel.Font = Enum.Font.GothamMedium
-SliderLabel.TextSize = 10
-SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-SliderLabel.ZIndex = 12
-SliderLabel.Parent = SliderFrame
-
-local SlideBar = Instance.new("TextButton")
-SlideBar.Size = UDim2.new(1, -20, 0, 6)
-SlideBar.Position = UDim2.new(0, 10, 0, 28)
-SlideBar.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-SlideBar.Text = ""
-SlideBar.ZIndex = 12
-SlideBar.Parent = SliderFrame
-
-local BarCorner = Instance.new("UICorner")
-BarCorner.CornerRadius = UDim.new(1, 0)
-BarCorner.Parent = SlideBar
-
-local FillBar = Instance.new("Frame")
-FillBar.Size = UDim2.new((silentAimFOV - 10) / (600 - 10), 0, 1, 0)
-FillBar.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-FillBar.BorderSizePixel = 0
-FillBar.ZIndex = 13
-FillBar.Parent = SlideBar
-
-local FillCorner = Instance.new("UICorner")
-FillCorner.CornerRadius = UDim.new(1, 0)
-FillCorner.Parent = FillBar
-
-local function slide(input)
-    local rawPercentage = (input.Position.X - SlideBar.AbsolutePosition.X) / SlideBar.AbsoluteSize.X
-    local percentage = math.clamp(rawPercentage, 0, 1)
-    FillBar.Size = UDim2.new(percentage, 0, 1, 0)
-    local value = math.floor(10 + (percentage * (600 - 10)))
-    SliderLabel.Text = "Raio do FOV: " .. value .. "px"
-    silentAimFOV = value
-end
-
-local sliding = false
-SlideBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        sliding = true slide(input)
+    else
+        TeleportButton.Text = "Insira um ID válido!"
+        TeleportButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        task.wait(2)
+        TeleportButton.Text = "TELEPORTAR"
+        TeleportButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
     end
 end)
-game.UserInputService.InputChanged:Connect(function(input)
-    if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        slide(input)
-    end
-end)
-game.UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = false end
-end)
-
--- ==========================================
--- MOTOR DE SELEÇÃO DE ALVOS
--- ==========================================
-local function getClosestPlayerToCrosshair()
-    local target = nil
-    local shortestDistance = silentAimFOV
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    local allPlayers = game:findFirstChildOfClass("Players"):GetPlayers()
-
-    for _, p in ipairs(allPlayers) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-            local hum = p.Character:FindFirstChildOfClass("Humanoid")
